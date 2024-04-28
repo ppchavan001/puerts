@@ -1,4 +1,3 @@
-Add-Type -AssemblyName System.Windows.Forms
 
 
 $repo = "puerts/backend-nodejs"
