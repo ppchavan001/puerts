@@ -4162,6 +4162,48 @@ void FJsEnvImpl::MakeUClass(const v8::FunctionCallbackInfo<v8::Value>& Info)
         }
     }
 
+
+	// Add remaining functions from Methods array as UFunctions if not overridden
+	v8::Local<v8::Array> MethodNames = Methods->GetPropertyNames(Context).ToLocalChecked();
+	for (uint32_t Index = 0; Index < MethodNames->Length(); ++Index)
+	{
+		v8::Local<v8::Value> Key = MethodNames->Get(Context, Index).ToLocalChecked();
+		if (Key->IsString())
+		{
+			FString MethodName = FV8Utils::ToFString(Isolate, Key);
+			if (!overrided.Contains(*MethodName))
+			{
+				auto MaybeValue = Methods->Get(Context, Key);
+				if (!MaybeValue.IsEmpty() && MaybeValue.ToLocalChecked()->IsFunction())
+				{
+					// Create a new UFunction and add it to the class
+					UJSGeneratedFunction* Function = NewObject<UJSGeneratedFunction>(Class, FName(*MethodName), RF_Public | RF_Transient);
+
+
+					Function->Bind();
+					Function->StaticLink(true);
+
+					if (true)
+					{
+						Function->FunctionFlags |= FUNC_Native;    //Let UE not go through analysis
+					}
+
+					Function->SetNativeFunc(&UJSGeneratedFunction::execCallJS);
+
+					Function->JsFunction = v8::UniquePersistent<v8::Function>(Isolate, v8::Local<v8::Function>::Cast(MaybeValue.ToLocalChecked()));
+					Function->DynamicInvoker = DynamicInvoker;
+					Function->FunctionTranslator = std::make_unique<PUERTS_NAMESPACE::FFunctionTranslator>(Function, false);
+
+					Function->Next = Class->Children;
+					Class->Children = Function;
+
+					Class->AddFunctionToFunctionMap(Function, (*MethodName));
+				}
+			}
+		}
+	}
+
+
     Class->Bind();
     Class->StaticLink(true);
 
