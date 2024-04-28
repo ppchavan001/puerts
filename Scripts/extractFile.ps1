@@ -1,4 +1,3 @@
-Add-Type -AssemblyName System.Windows.Forms
 
 param(
     [string]$Path,
@@ -9,7 +8,6 @@ $7zipPath = "C:\Program Files\7-Zip\7z.exe"
 
 if (-not (Test-Path $7zipPath)) {
     Write-Host "Error: 7zip not found at: $7zipPath"
-    [System.Windows.Forms.MessageBox]::Show("Error 7zip not found.", "Error", "OK", "Error")
     exit
 }
 # Check if the file exists
@@ -29,6 +27,5 @@ try {
     Write-Host "File extracted successfully to: $DestinationPath"
 }
 catch {
-    Write-Host "Failed to extract file. Error: $_"
-    [System.Windows.Forms.MessageBox]::Show("Error extracing downloaded file. Make sure 7Zip is installed at C:\Program Files\7-Zip\7z.exe \n $($_.Exception.Message)", "Error", "OK", "Error")
+    Write-Host "Failed to extract file. Error: $($_.Exception.Message)"
 }

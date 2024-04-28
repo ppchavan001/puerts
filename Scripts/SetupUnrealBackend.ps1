@@ -2,8 +2,9 @@ Add-Type -AssemblyName System.Windows.Forms
 
 
 $repo = "puerts/backend-nodejs"
+$repo = "puerts/backend-quickjs"
 $currentDir = Get-Location
-$tempDir = "$currentDir/temp"
+$tempDir = "$currentDir\temp"
 $tempFile = "$tempDir/pts_git_apiResponse.json"
 
 function PrintError {
@@ -38,6 +39,15 @@ function Print {
         
 }
 
+function ProcessWebRequest {
+    param (
+        $request
+    )
+    Print "Processing WebRequest $request" 
+    Invoke-WebRequest $request
+}
+
+
 PrintWarning("Current dir : $currentDir")
 Print("tempDir : $tempDir")
 Print("tempFile : $tempFile")
@@ -60,14 +70,16 @@ if ($response.assets.Count -gt 0) {
     $downloadUrl = $latestAsset.browser_download_url
 
     # Define the path where the asset will be downloaded
-    $downloadPath = "$tempDir"
+    $downloadPath = "$tempDir\$latestTag"
 
     New-Item -ItemType Directory -Path $downloadPath -Force
 
     try {
         $ProgressPreference = 'SilentlyContinue'
-        Print "Downloadig to $downloadPath"
-        Invoke-WebRequest -Uri $downloadUrl -OutFile "$downloadPath"
+        $finalFile = "$downloadPath\$assetName";
+        $downloadRequest = "-Uri $downloadUrl -OutFile $finalFile"
+        Print "Sending web request $downloadRequest"
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $finalFile
         PrintSuccess "Asset '$($latestAsset.name)' downloaded successfully to '$downloadPath'."
     }
     catch {
