@@ -2,8 +2,8 @@ Add-Type -AssemblyName System.Windows.Forms
 
 
 $repo = "puerts/backend-nodejs"
-$repo = "puerts/backend-quickjs"
-$currentDir = Get-Location
+# $repo = "puerts/backend-quickjs"
+$currentDir = $PSScriptRoot
 $tempDir = "$currentDir\temp"
 $tempFile = "$tempDir/pts_git_apiResponse.json"
 
@@ -77,10 +77,17 @@ if ($response.assets.Count -gt 0) {
     try {
         $ProgressPreference = 'SilentlyContinue'
         $finalFile = "$downloadPath\$assetName";
-        $downloadRequest = "-Uri $downloadUrl -OutFile $finalFile"
-        Print "Sending web request $downloadRequest"
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $finalFile
-        PrintSuccess "Asset '$($latestAsset.name)' downloaded successfully to '$downloadPath'."
+        
+        if (Test-Path -Path $script:finalFile -PathType Leaf) {
+            PrintWarning( "Selected file already exists in dir. Proceeding setup with it")
+        }
+        else {    
+            $downloadRequest = "-Uri $downloadUrl -OutFile $finalFile"
+            Print "Sending web request $downloadRequest"
+            Invoke-WebRequest -Uri $downloadUrl -OutFile $finalFile
+            PrintSuccess "Asset '$($latestAsset.name)' downloaded successfully to '$downloadPath'."
+        }
+        PrintSuccess "Asset file ready at : $finalFile"
     }
     catch {
         PrintError("An error occurred while downloading '$($latestAsset.name)': $($_.Exception.Message)")
@@ -90,9 +97,7 @@ else {
     PrintError "No assets found in the latest release."
 }
 
-exit
-
-
+$downloadedFile = $finalFile
 if ($downloadedFile.Length -gt 0) {
     PrintWarning("Downloaded file :$downloadedFile")
 }
@@ -105,22 +110,23 @@ else {
 Print("Extracting file to : $tarLoc")
 
 $tarLoc = "$tempDir/tar/"
-& "./extractFile.ps1" "$downloadedFile" $tarLoc
+$extractionScript = "$currentDir/extractFile.ps1"
+& $extractionScript "$downloadedFile" $tarLoc
 
 Print("Extracted file to : $tarLoc")
 
 # Check tarLoc and extract all tar files to tarLoc/out
 $tarFiles = Get-ChildItem -Path $tarLoc -Filter "*.tar"
-foreach ($tarFile in $tarFiles) {
+foreach ( $tarFile in $tarFiles) {
     $outputDirectory = Join-Path -Path $tarLoc -ChildPath "out/"
     New-Item -ItemType Directory -Path $outputDirectory -Force
     Print("Extracting " + $tarFile.Name + " to $outputDirectory")
-    & "./extractFile.ps1" -Path $tarFile.FullName -DestinationPath $outputDirectory
+    & $extractionScript -Path $tarFile.FullName -DestinationPath $outputDirectory
 }
 
 PrintSuccess("Extracted all files.")
 
-$pluginTarget = Join-Path -Path $currentDir -ChildPath "..\puerTS"
+$pluginTarget = Join-Path -Path $currentDir -ChildPath "../unreal/Puerts/ThirdParty/"
 New-Item -ItemType Directory -Path $pluginTarget -Force
 $pluginTarget = Resolve-Path($pluginTarget)
 Print("Copying files from $outputDirectory to $pluginTarget")
@@ -130,7 +136,7 @@ PrintSuccess("Finished copying files to $pluginTarget")
 
 PrintSuccess("pts setup successfully.")
 
-if ($delcheckbox.Checked) {
+if ($false) {
     PrintWarning("Removing temp dir : $tempDir")
     Remove-Item $tempDir -Recurse
 }
