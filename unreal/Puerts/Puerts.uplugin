@@ -1,50 +1,76 @@
 {
-  "FileVersion": 3,
-  "FriendlyName": "puer.ts",
-  "Version": 1,
-  "VersionName": "1.0.5",
-  "FriendlyVersion": "1.0.5",
-  "Description": "Javascript Runtime for unreal engine",
-  "Category": "Programming",
-  "CreatedBy": "Tencent Corporation",
-  "CreatedByURL": "https://github.com/Tencent",
-  "EnabledByDefault": true,
-  "MarketplaceURL" : "",
-  "CanContainContent": true,
-  "CanBeUsedWithUnrealHeaderTool" : true,
-  "Modules": [
-    {
-      "Name": "WasmCore",
-      "Type": "Runtime",
-      "LoadingPhase": "PreDefault",
-      "WhitelistPlatforms": [ "Win64", "Android", "Mac", "IOS", "Linux" ]
-    },
-    {
-      "Name": "JsEnv",
-      "Type": "Runtime",
-      "LoadingPhase": "PreDefault",
-      "WhitelistPlatforms": [ "Win64", "Android", "Mac", "IOS", "Linux" ]
-    },
-    {
-      "Name": "DeclarationGenerator",
-      "Type": "Editor",
-      "LoadingPhase": "Default"
-    },
-    {
-      "Name": "ParamDefaultValueMetas",
-      "Type": "Program",
-      "LoadingPhase": "PostConfigInit"
-    },
-    {
-      "Name": "Puerts",
-      "Type": "Runtime",
-      "LoadingPhase": "PostEngineInit",
-      "WhitelistPlatforms": [ "Win64", "Android", "Mac", "IOS", "Linux" ]
-    },
-    {
-      "Name": "PuertsEditor",
-      "Type": "Editor",
-      "LoadingPhase": "PostEngineInit"
-    }
-  ]
+	"FileVersion": 3,
+	"FriendlyName": "puer.ts",
+	"Version": 1,
+	"VersionName": "1.0.5 (2024.05.19)",
+	"FriendlyVersion": "1.0.5",
+	"Description": "puerts Modified by @ppchavan001",
+	"Category": "Programming",
+	"CreatedBy": "Tencent Corporation",
+	"CreatedByURL": "https://github.com/Tencent",
+	"EnabledByDefault": true,
+	"MarketplaceURL": "",
+	"CanContainContent": true,
+	"CanBeUsedWithUnrealHeaderTool": true,
+	"Modules": [
+		{
+			"Name": "WasmCore",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"PlatformAllowList": [
+				"Win64",
+				"Android",
+				"Mac",
+				"IOS",
+				"Linux"
+			]
+		},
+		{
+			"Name": "JsEnv",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"PlatformAllowList": [
+				"Win64",
+				"Android",
+				"Mac",
+				"IOS",
+				"Linux"
+			]
+		},
+		{
+			"Name": "DeclarationGenerator",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "ParamDefaultValueMetas",
+			"Type": "Program",
+			"LoadingPhase": "PostConfigInit"
+		},
+		{
+			"Name": "Puerts",
+			"Type": "Runtime",
+			"LoadingPhase": "PostEngineInit",
+			"PlatformAllowList": [
+				"Win64",
+				"Android",
+				"Mac",
+				"IOS",
+				"Linux"
+			]
+		},
+		{
+			"Name": "PuertsEditor",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
+		}
+	],
+	"DocsURL": "",
+	"SupportURL": "",
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"SupportedPrograms": [
+		"UnrealHeaderTool"
+	]
 }
