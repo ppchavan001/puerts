@@ -22,7 +22,7 @@ const platformCompileConfig = {
             outputPluginPath: 'Android/libs/armeabi-v7a/',
             hook: function (CMAKE_BUILD_PATH: string, options: BuildOptions, cmakeAddedLibraryName: string, cmakeDArgs: string) {
                 const NDK = process.env.ANDROID_NDK || process.env.ANDROID_NDK_HOME || '~/android-ndk-r21b';
-                const API = options.backend.indexOf('node') != -1 ? 'android-24' : 'android-21';
+                const API = options.backend.indexOf('node') != -1 ? 'android-24' : (options.backend.indexOf('10.6.194') != -1 ? 'android-23' : 'android-21');
                 const ABI = 'armeabi-v7a';
                 const TOOLCHAIN_NAME = 'arm-linux-androideabi-4.9';
 
@@ -39,7 +39,7 @@ const platformCompileConfig = {
             outputPluginPath: 'Android/libs/arm64-v8a/',
             hook: function (CMAKE_BUILD_PATH: string, options: BuildOptions, cmakeAddedLibraryName: string, cmakeDArgs: string) {
                 const NDK = process.env.ANDROID_NDK || process.env.ANDROID_NDK_HOME || '~/android-ndk-r21b';
-                const API = options.backend.indexOf('node') != -1 ? 'android-24' : 'android-21';
+                const API = options.backend.indexOf('node') != -1 ? 'android-24' : (options.backend.indexOf('10.6.194') != -1 ? 'android-23' : 'android-21');
                 const ABI = 'arm64-v8a';
                 const TOOLCHAIN_NAME = 'arm-linux-androideabi-clang';
 
@@ -56,7 +56,7 @@ const platformCompileConfig = {
             outputPluginPath: 'Android/libs/x86_64/',
             hook: function (CMAKE_BUILD_PATH: string, options: BuildOptions, cmakeAddedLibraryName: string, cmakeDArgs: string) {
                 const NDK = process.env.ANDROID_NDK || process.env.ANDROID_NDK_HOME || '~/android-ndk-r21b';
-                const API = options.backend.indexOf('node') != -1 ? 'android-24' : 'android-21';
+                const API = options.backend.indexOf('node') != -1 ? 'android-24' : (options.backend.indexOf('10.6.194') != -1 ? 'android-23' : 'android-21');
                 const ABI = 'x86_64';
                 const TOOLCHAIN_NAME = 'x86_64-4.9';
 
@@ -72,7 +72,7 @@ const platformCompileConfig = {
     },
     'ohos': {
         'armv7': {
-            outputPluginPath: 'OHOS/libs/armeabi-v7a/',
+            outputPluginPath: 'OpenHarmony/libs/armeabi-v7a/',
             hook: function (CMAKE_BUILD_PATH: string, options: BuildOptions, cmakeAddedLibraryName: string, cmakeDArgs: string) {
                 const NDK = process.env.OHOS_NDK || process.env.OHOS_NDK_HOME;
                 if (!NDK) throw new Error("pleace set OHOS_NDK environment variable first!")
@@ -89,7 +89,7 @@ const platformCompileConfig = {
             }
         },
         'arm64': {
-            outputPluginPath: 'OHOS/libs/arm64-v8a/',
+            outputPluginPath: 'OpenHarmony/libs/arm64-v8a/',
             hook: function (CMAKE_BUILD_PATH: string, options: BuildOptions, cmakeAddedLibraryName: string, cmakeDArgs: string) {
                 const NDK = process.env.OHOS_NDK || process.env.OHOS_NDK_HOME;
                 if (!NDK) throw new Error("pleace set OHOS_NDK environment variable first!")
@@ -127,6 +127,7 @@ const platformCompileConfig = {
                 assert.equal(0, exec(`cmake ${cmakeDArgs} -DJS_ENGINE=${options.backend} -GXcode ..`).code)
                 cd("..")
                 assert.equal(0, exec(`cmake --build ${CMAKE_BUILD_PATH} --config ${options.config}`).code)
+                assert.equal(0, exec(`codesign --sign - --options linker-signed --force ${CMAKE_BUILD_PATH}/${options.config}/lib${cmakeAddedLibraryName}.dylib`).code)
 
                 mv(`${CMAKE_BUILD_PATH}/${options.config}/lib${cmakeAddedLibraryName}.dylib`, `${CMAKE_BUILD_PATH}/${options.config}/${cmakeAddedLibraryName}.bundle`)
                 return `${CMAKE_BUILD_PATH}/${options.config}/${cmakeAddedLibraryName}.bundle`
@@ -139,6 +140,7 @@ const platformCompileConfig = {
                 assert.equal(0, exec(`cmake ${cmakeDArgs} -DJS_ENGINE=${options.backend} -DFOR_SILICON=ON -GXcode ..`).code)
                 cd("..")
                 assert.equal(0, exec(`cmake --build ${CMAKE_BUILD_PATH} --config ${options.config}`).code)
+                assert.equal(0, exec(`codesign --sign - --options linker-signed --force ${CMAKE_BUILD_PATH}/${options.config}/lib${cmakeAddedLibraryName}.dylib`).code)
 
                 return `${CMAKE_BUILD_PATH}/${options.config}/lib${cmakeAddedLibraryName}.dylib`
             }
@@ -179,6 +181,17 @@ const platformCompileConfig = {
 
                 return `${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.so`;
             }
+        },
+        'arm64': {
+            outputPluginPath: 'Linux/libs/arm64/',
+            hook: function (CMAKE_BUILD_PATH: string, options: BuildOptions, cmakeAddedLibraryName: string, cmakeDArgs: string) {
+                cd(CMAKE_BUILD_PATH);
+                assert.equal(0, exec(`cmake ${cmakeDArgs} -DJS_ENGINE=${options.backend} -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON -DCMAKE_BUILD_TYPE=${options.config} ..`).code)
+                cd("..")
+                assert.equal(0, exec(`cmake --build ${CMAKE_BUILD_PATH} --config ${options.config}`).code)
+
+                return `${CMAKE_BUILD_PATH}/lib${cmakeAddedLibraryName}.so`;
+            }
         }
     }
 }
@@ -197,6 +210,9 @@ async function runPuertsMake(cwd: string, options: BuildOptions) {
     if (checkCMake.stderr && !checkCMake.stdout) {
         console.error("[Puer] CMake is not installed");
         process.exit();
+    }
+    if (options.backend == "v8_9.4") {
+        options.backend = "v8_9.4.146.24"
     }
     if (!existsSync(`${cwd}/.backends/${options.backend}`)) {
         await downloadBackend(cwd, options.backend);

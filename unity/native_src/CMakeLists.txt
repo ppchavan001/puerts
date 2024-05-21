@@ -66,13 +66,6 @@ set ( PUERTS_INC
     ${PROJECT_SOURCE_DIR}/../../unreal/Puerts/Source/JsEnv/Private/PromiseRejectCallback.hpp
 )
 
-if(DEFINED PUERTS_EXTRA_SRC)
-    list(APPEND PUERTS_SRC ${PUERTS_EXTRA_SRC})
-endif()
-
-if(DEFINED PUERTS_EXTRA_INC)
-    include_directories(${PUERTS_EXTRA_INC})
-endif()
 
 macro(source_group_by_dir proj_dir source_files)
     if(MSVC OR APPLE)
@@ -109,6 +102,14 @@ else ()
         Src/JSFunction.cpp
         ${PROJECT_SOURCE_DIR}/../../unreal/Puerts/Source/JsEnv/Private/V8InspectorImpl.cpp
     )
+endif()
+
+if(DEFINED PUERTS_EXTRA_SRC)
+    list(APPEND PUERTS_SRC ${PUERTS_EXTRA_SRC})
+endif()
+
+if(DEFINED PUERTS_EXTRA_INC)
+    include_directories(${PUERTS_EXTRA_INC})
 endif()
 
 if ( APPLE )
@@ -285,7 +286,7 @@ elseif (UNIX)
     
     # definition
     list(APPEND PUERTS_COMPILE_DEFINITIONS PLATFORM_LINUX)
-    if (NOT ("${JS_ENGINE}" STREQUAL "nodejs_16"))
+    if (NOT ("${JS_ENGINE}" STREQUAL "nodejs_16") AND NOT ("${JS_ENGINE}" STREQUAL "v8_10.6.194"))
         set(CMAKE_CXX_COMPILER "clang++")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")

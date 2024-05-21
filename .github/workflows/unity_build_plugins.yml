@@ -10,6 +10,7 @@ on:
       - unreal/Puerts/Source/JsEnv/Private/V8InspectorImpl.cpp
       - unreal/Puerts/Source/JsEnv/Private/V8InspectorImpl.h
       - unreal/Puerts/Source/JsEnv/Private/PromiseRejectCallback.hpp
+      - unreal/Puerts/ThirdParty/**
       - .github/workflows/unity_build_plugins.yml
 
 env:
@@ -21,11 +22,24 @@ jobs:
     
     steps:
       - uses: actions/checkout@v3
+      - name: Install NDK
+        shell: bash
+        run: |
+          cd ~
+          rm -rf ~/android-ndk-r21b
+          wget -O NDK -q https://dl.google.com/android/repository/android-ndk-r21b-linux-x86_64.zip
+          sudo apt install unzip -y
+          unzip -q NDK
       - name: BuildAndroid
         uses: ./.github/workflows/composites/unity-build-plugins/android/
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           backend: v8_9.4
+      - name: BuildAndroid_V8_10_6
+        uses: ./.github/workflows/composites/unity-build-plugins/android/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: v8_10.6.194
       - name: BuildAndroidQuickJS
         uses: ./.github/workflows/composites/unity-build-plugins/android/
         with:
@@ -41,6 +55,40 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           backend: mult
+          
+  ohos:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install NDK
+        shell: bash
+        run: |
+          cd ~
+          curl -O https://repo.huaweicloud.com/harmonyos/os/4.1-Release/ohos-sdk-windows_linux-public.tar.gz
+          tar xvfz ohos-sdk-windows_linux-public.tar.gz
+          cd ohos-sdk/linux
+          unzip -q -o -d ./ native-linux-x64-4.1.7.5-Release.zip
+      - name: BuildOHOS
+        uses: ./.github/workflows/composites/unity-build-plugins/ohos/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: v8_9.4
+      - name: BuildOHOS_V8_10_6
+        uses: ./.github/workflows/composites/unity-build-plugins/ohos/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: v8_10.6.194
+      - name: BuildOHOSQuickJS
+        uses: ./.github/workflows/composites/unity-build-plugins/ohos/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: quickjs
+      - name: BuildOHOSMultBackend
+        uses: ./.github/workflows/composites/unity-build-plugins/ohos/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: mult
 
   ios:
     runs-on: macos-11
@@ -52,6 +100,11 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           backend: v8_9.4
+      - name: BuildiOS_V8_10_6
+        uses: ./.github/workflows/composites/unity-build-plugins/ios/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: v8_10.6.194
       - name: BuildiOSQuickjs
         uses: ./.github/workflows/composites/unity-build-plugins/ios/
         with:
@@ -78,6 +131,11 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           backend: v8_9.4
+      - name: BuildOSX_V8_10_6
+        uses: ./.github/workflows/composites/unity-build-plugins/osx/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: v8_10.6.194
       - name: BuildOSXNodejs
         uses: ./.github/workflows/composites/unity-build-plugins/osx/
         with:
@@ -104,6 +162,11 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           backend: v8_9.4
+      - name: BuildWindows_V8_10_6
+        uses: ./.github/workflows/composites/unity-build-plugins/windows/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: v8_10.6.194
       - name: BuildWindowsQuickjs
         uses: ./.github/workflows/composites/unity-build-plugins/windows/
         with:
@@ -130,6 +193,11 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           backend: v8_9.4
+      - name: BuildLinux_V8_10_6
+        uses: ./.github/workflows/composites/unity-build-plugins/linux/
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          backend: v8_10.6.194
       - name: BuildWindowsQuickjs
         uses: ./.github/workflows/composites/unity-build-plugins/linux/
         with:

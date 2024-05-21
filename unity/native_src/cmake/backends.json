@@ -204,8 +204,8 @@
             }
         }
     },
-    "v8_9.4": {
-        "url": "https://github.com/puerts/backend-v8/releases/download/V8_9.4.146.24_230822/v8_bin_9.4.146.24.tgz",
+    "v8_9.4.146.24": {
+        "url": "https://github.com/puerts/backend-v8/releases/download/V8_9.4.146.24_240430/v8_bin_9.4.146.24.tgz",
         "config": {
             "definition": [
                 "V8_94_OR_NEWER"
@@ -223,6 +223,14 @@
                     ],
                     "x64": [
                         "/Lib/Android/x64/libwee8.a"
+                    ]
+                },
+                "ohos": {
+                    "armv7": [
+                        "/Lib/OHOS/armeabi-v7a/libwee8.a"
+                    ],
+                    "arm64": [
+                        "/Lib/OHOS/arm64-v8a/libwee8.a"
                     ]
                 },
                 "win": {
@@ -244,6 +252,9 @@
                 "linux": {
                     "x64": [
                         "/Lib/Linux/libwee8.a"
+                    ],
+                    "arm64": [
+                        "/Lib/Linux_arm64/libwee8.a"
                     ]
                 }
             },
@@ -257,7 +268,7 @@
         }
     },
     "v8_10.6.194": {
-        "url": "https://github.com/puerts/backend-v8/releases/download/V8_10.6.194_240428/v8_bin_10.6.194.tgz",
+        "url": "https://github.com/puerts/backend-v8/releases/download/V8_10.6.194_240508/v8_bin_10.6.194.tgz",
         "config": {
             "definition": [
                 "V8_94_OR_NEWER"
@@ -272,9 +283,6 @@
                     ],
                     "arm64": [
                         "/Lib/OHOS/arm64-v8a/libwee8.a"
-                    ],
-                    "x64": [
-                        "/Lib/OHOS/x64/libwee8.a"
                     ]
                 },
                 "android": {
@@ -307,6 +315,9 @@
                 "linux": {
                     "x64": [
                         "/Lib/Linux/libwee8.a"
+                    ],
+                    "arm64": [
+                        "/Lib/Linux_arm64/libwee8.a"
                     ]
                 }
             },
@@ -369,7 +380,7 @@
         }
     },
     "mult": {
-        "url": "https://github.com/puerts/backend-mult/releases/download/MULT_240419/mult_backends.tgz",
+        "url": "https://github.com/puerts/backend-mult/releases/download/MULT_240516/mult_backends.tgz",
         "config": {
             "definition": [
                 "V8_94_OR_NEWER"
@@ -390,6 +401,16 @@
                     "x64": [
                         "/Lib/Android/x64/libwee8.a",
                          "/Lib/Android/x86_64/libquickjs.a"
+                    ]
+                },
+                "ohos": {
+                    "armv7": [
+                        "/Lib/OHOS/armeabi-v7a/libwee8.a",
+                        "/Lib/OHOS/armeabi-v7a/libquickjs.a"
+                    ],
+                    "arm64": [
+                        "/Lib/OHOS/arm64-v8a/libwee8.a",
+                        "/Lib/OHOS/arm64-v8a/libquickjs.a"
                     ]
                 },
                 "win": {
