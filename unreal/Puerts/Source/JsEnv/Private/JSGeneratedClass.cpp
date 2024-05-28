@@ -75,6 +75,12 @@ UClass* UJSGeneratedClass::Create(const FString& Name, UClass* Parent,
     Class->ClassFlags |= CLASS_CompiledFromBlueprint;    // AActor::Tick只有有这标记时，才会调用ReceiveTick
     Class->ClassCastFlags |= Parent->ClassCastFlags;
 
+    Class->SetMetaData(TEXT("BlueprintType"), TEXT("true"));
+    Class->SetMetaData(TEXT("IsBlueprintBase"), TEXT("true"));
+    if (Class->IsChildOf(UActorComponent::StaticClass()))
+    {
+        Class->SetMetaData(TEXT("BlueprintSpawnableComponent"), TEXT("true"));
+    }
     return Class;
 }
 
@@ -104,7 +110,7 @@ void UJSGeneratedClass::Override(v8::Isolate* Isolate, UClass* Class, UFunction*
     FName FunctionName = Super->GetFName();
     if (Existed)
     {
-        if (auto MaybeJSFunction = Cast<UJSGeneratedFunction>(Super))    //这种情况只需简单替换下js函数
+        if (auto MaybeJSFunction = Cast<UJSGeneratedFunction>(Super))    // 这种情况只需简单替换下js函数
         {
             MaybeJSFunction->DynamicInvoker = DynamicInvoker;
             MaybeJSFunction->FunctionTranslator = std::make_unique<PUERTS_NAMESPACE::FFunctionTranslator>(Super, false);
@@ -113,7 +119,7 @@ void UJSGeneratedClass::Override(v8::Isolate* Isolate, UClass* Class, UFunction*
             return;
         }
         // UE_LOG(LogTemp, Error, TEXT("replace %s of %s"), *Super->GetName(), *Class->GetName());
-        //同一Outer下的同名对象只能有一个...
+        // 同一Outer下的同名对象只能有一个...
         Super->Rename(*FString::Printf(TEXT("%s%s"), TEXT(OLD_METHOD_PREFIX), *Super->GetName()), Class,
             REN_DontCreateRedirectors | REN_DoNotDirty | REN_ForceNoResetLoaders);
         Class->AddFunctionToFunctionMap(Super, Super->GetFName());
@@ -150,7 +156,7 @@ void UJSGeneratedClass::Override(v8::Isolate* Isolate, UClass* Class, UFunction*
 
     if (IsNative)
     {
-        Function->FunctionFlags |= FUNC_Native;    //让UE不走解析
+        Function->FunctionFlags |= FUNC_Native;    // 让UE不走解析
     }
 
     Function->SetNativeFunc(&UJSGeneratedFunction::execCallJS);
@@ -245,7 +251,7 @@ UFunction* UJSGeneratedClass::Mixin(v8::Isolate* Isolate, UClass* Class, UFuncti
     Class->Children = Function;
     Class->AddFunctionToFunctionMap(Function, Function->GetFName());
 
-    Function->FunctionFlags |= FUNC_Native;    //让UE不走解析
+    Function->FunctionFlags |= FUNC_Native;    // 让UE不走解析
     Function->SetNativeFunc(&UJSGeneratedFunction::execCallMixin);
     Function->Bind();
     Function->StaticLink(true);
@@ -261,7 +267,7 @@ UFunction* UJSGeneratedClass::Mixin(v8::Isolate* Isolate, UClass* Class, UFuncti
         Function->Original = Super;
         Function->OriginalFunc = Super->GetNativeFunc();
         Function->OriginalFunctionFlags = Super->FunctionFlags;
-        Super->FunctionFlags |= FUNC_Native;    //让UE不走解析
+        Super->FunctionFlags |= FUNC_Native;    // 让UE不走解析
         Super->SetNativeFunc(&UJSGeneratedFunction::execCallMixin);
         Class->AddNativeFunction(*Super->GetName(), &UJSGeneratedFunction::execCallMixin);
         UJSGeneratedFunction::SetJSGeneratedFunctionToScript(Super, Function);
