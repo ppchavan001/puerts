@@ -32,8 +32,6 @@
 
 * 在该模块的“.Build.cs”文件中加入对JsEnv模块的依赖
 
-* 该模块的“.Build.cs”文件中，将bEnableUndefinedIdentifierWarnings设置为false
-
 ## helloworld
 
 以一个最简单的普通c++ class为例

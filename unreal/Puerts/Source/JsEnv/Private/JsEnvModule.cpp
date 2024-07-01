@@ -9,12 +9,19 @@
 #include "JsEnvModule.h"
 //#include "TGameJSCorePCH.h"
 #include "HAL/MemoryBase.h"
+#include "NamespaceDef.h"
+PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #if defined(WITH_NODEJS)
 #pragma warning(push, 0)
 #include "node.h"
 #include "uv.h"
 #pragma warning(pop)
 #endif
+#pragma warning(push, 0)
+#include "v8.h"
+#include "libplatform/libplatform.h"
+#pragma warning(pop)
+PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 
 class FMallocWrapper final : public FMalloc
 {
@@ -137,13 +144,6 @@ public:
     }
 };
 
-#pragma warning(push, 0)
-#include "v8.h"
-#include "libplatform/libplatform.h"
-#pragma warning(pop)
-
-#include "NamespaceDef.h"
-
 DEFINE_LOG_CATEGORY_STATIC(JsEnvModule, Log, All);
 
 class FJsEnvModule : public IJsEnvModule
@@ -208,7 +208,11 @@ void FJsEnvModule::ShutdownModule()
     // This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
     // we call this function before unloading the module.
     v8::V8::Dispose();
+#if V8_MAJOR_VERSION > 9
+    v8::V8::DisposePlatform();
+#else
     v8::V8::ShutdownPlatform();
+#endif
 
     if (MallocWrapper && MallocWrapper == GMalloc)
     {

@@ -16,11 +16,13 @@
 #include "JSClassRegister.h"
 #endif
 
+#include "NamespaceDef.h"
+
+PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #pragma warning(push, 0)
 #include "v8.h"
 #pragma warning(pop)
-
-#include "NamespaceDef.h"
+PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 
 #if !defined(MAPPER_ISOLATE_DATA_POS)
 #define MAPPER_ISOLATE_DATA_POS 0

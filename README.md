@@ -17,9 +17,9 @@
 [![license](https://img.shields.io/badge/license-BSD_3_Clause-blue.svg)](https://github.com/Tencent/puerts/blob/master/LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-blue.svg)](https://github.com/Tencent/puerts/pulls)
 
-[![unreal](https://img.shields.io/badge/unreal-v1.0.6p1-blue.svg)](https://github.com/Tencent/puerts/releases/tag/Unreal_v1.0.6p1)
+[![unreal](https://img.shields.io/badge/unreal-v1.0.7-blue.svg)](https://github.com/Tencent/puerts/releases/tag/Unreal_v1.0.7)
 
-[![unity](<https://img.shields.io/badge/unity(stable)-v2.0.2-blue.svg>)](doc/unity/zhcn/install.md)
+[![unity](https://img.shields.io/badge/unity(stable)-v2.1.0-blue.svg)](doc/unity/zhcn/install.md)
 ![Unity_Test](https://github.com/Tencent/puerts/workflows/unity%20unittest/badge.svg)
 
 [跳转中文](#what---普洱ts是什么)
@@ -68,6 +68,23 @@
 
 ---
 
+## Select Script Engine
+
+Currently puerts supports three script engines: v8, quickjs, nodejs, choose the one that suits you.
+
+* V8 (default): Generally excellent performance, moderate code size, only includes the implementation of the ECMAScript specification, does not include Node.js API or browser API.
+
+* QuickJS: Performance is not as good as V8, does not support debugging, but has a small code size, suitable for scenarios where code size is critical.
+
+* Node.js: Supports Node.js API (OpenSSL-related APIs are not supported on Unreal Engine's mobile platform), but has a larger code size.
+
+
+| Script Engine | Node api | Performance | Code Size | Debugging | Notes |
+| --- | --- | --- | --- | --- | --- |
+| V8 | ❌ | `*****` | `***` | ✔️ | |
+| QuickJS | ❌ | `**` | `*` | ❌ | |
+| Node.js | ✔️ | `*****` | `*****` | ✔️ | OpenSSL may be disabled |
+
 ## Avaliable on these Engine
 
 -   unreal engine 4.22 ~ latest
@@ -78,10 +95,12 @@
 
 ## Available on these Platform
 
--   iOS
--   Android
--   Windows
--   Macos
+* iOS
+* Android
+* OpenHarmony
+* Windows
+* Macos
+
 
 ## Ask for help
 
@@ -133,6 +152,22 @@ PuerTS 是 Unity/Unreal/Dotnet 下的 TypeScript 编程解决方案
 
 ---
 
+## 脚本引擎选择
+
+目前puerts支持三种脚本引擎：v8、quickjs、nodejs，选择合适你的那个。
+
+* v8（默认）：综合比较优秀，高性能，代码体积适中，仅包含ecmascript规范的实现，不包含nodejs api、浏览器 api
+
+* quickjs： 性能不如v8，不支持调试，但代码体积小，适用于代码段大小敏感型业务
+
+* nodejs：支持nodejs api（unreal engine的移动平台下不支持openssl相关api），代码体积较大
+
+| 脚本引擎 | Node api | 性能 | 代码体积 | 调试 | 补充 |
+| --- | --- | --- | --- | --- | --- |
+| V8 | ❌ | `*****` | `***` | ✔️ | |
+| QuickJS | ❌ | `**` | `*` | ❌ | |
+| Node.js | ✔️ | `*****` | `*****` | ✔️ | OpenSSL 可能被禁用 |
+
 ## 可用引擎
 
 -   unreal engine 4.22 ~ latest
@@ -143,10 +178,12 @@ PuerTS 是 Unity/Unreal/Dotnet 下的 TypeScript 编程解决方案
 
 ## 可用平台
 
--   iOS
--   Android
--   Windows
--   Macos
+* iOS
+* Android
+* 鸿蒙（OpenHarmony）
+* Windows
+* Macos
+
 
 ## 技术支持
 

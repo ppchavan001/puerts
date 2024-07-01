@@ -32,11 +32,6 @@
 #endif
 #include "ContainerMeta.h"
 
-#pragma warning(push, 0)
-#include "libplatform/libplatform.h"
-#include "v8.h"
-#pragma warning(pop)
-
 #include "V8InspectorImpl.h"
 #if USE_WASM3
 #include "WasmModuleInstance.h"
@@ -69,6 +64,7 @@
 #endif
 
 #else
+PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #if PLATFORM_WINDOWS
 #include <windows.h>
 #elif PLATFORM_LINUX
@@ -79,6 +75,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #endif
+PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #endif
 
 #if !defined(ENGINE_INDEPENDENT_JSENV)
@@ -381,7 +378,7 @@ FJsEnvImpl::FJsEnvImpl(std::shared_ptr<IJSModuleLoader> InModuleLoader, std::sha
 #endif
 
     CreateParams.array_buffer_allocator = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
-#if WITH_QUICKJS
+#ifdef WITH_QUICKJS
     MainIsolate = InExternalRuntime ? v8::Isolate::New(InExternalRuntime) : v8::Isolate::New(CreateParams);
 #else
     check(!InExternalRuntime && !InExternalContext);
@@ -396,7 +393,7 @@ FJsEnvImpl::FJsEnvImpl(std::shared_ptr<IJSModuleLoader> InModuleLoader, std::sha
     v8::Isolate::Scope Isolatescope(Isolate);
     v8::HandleScope HandleScope(Isolate);
 
-#if WITH_QUICKJS
+#ifdef WITH_QUICKJS
     v8::Local<v8::Context> Context =
         (InExternalRuntime && InExternalContext) ? v8::Context::New(Isolate, InExternalContext) : v8::Context::New(Isolate);
 #else
@@ -3012,7 +3009,7 @@ FJsEnvImpl::FTemplateInfo* FJsEnvImpl::GetTemplateInfoOfType(UStruct* InStruct, 
                 Template->SetClassName(
                     v8::String::NewFromUtf8(Isolate, TCHAR_TO_UTF8(*InStruct->GetPathName()), v8::NewStringType::kNormal)
                         .ToLocalChecked());
-#elif !UE_SHIPPING
+#elif !defined(UE_SHIPPING)
                 Template->SetClassName(
                     v8::String::NewFromUtf8(Isolate, TCHAR_TO_UTF8(*InStruct->GetName()), v8::NewStringType::kNormal)
                         .ToLocalChecked());
@@ -3044,7 +3041,7 @@ FJsEnvImpl::FTemplateInfo* FJsEnvImpl::GetTemplateInfoOfType(UStruct* InStruct, 
                 Template->SetClassName(
                     v8::String::NewFromUtf8(Isolate, TCHAR_TO_UTF8(*InStruct->GetPathName()), v8::NewStringType::kNormal)
                         .ToLocalChecked());
-#elif !UE_SHIPPING
+#elif !defined(UE_SHIPPING)
                 Template->SetClassName(
                     v8::String::NewFromUtf8(Isolate, TCHAR_TO_UTF8(*InStruct->GetName()), v8::NewStringType::kNormal)
                         .ToLocalChecked());
@@ -3545,8 +3542,11 @@ std::unordered_multimap<int, FJsEnvImpl::FModuleInfo*>::iterator FJsEnvImpl::Fin
     return HashToModuleInfo.end();
 }
 
-v8::MaybeLocal<v8::Module> FJsEnvImpl::ResolveModuleCallback(
-    v8::Local<v8::Context> Context, v8::Local<v8::String> Specifier, v8::Local<v8::Module> Referrer)
+v8::MaybeLocal<v8::Module> FJsEnvImpl::ResolveModuleCallback(v8::Local<v8::Context> Context, v8::Local<v8::String> Specifier,
+#if V8_MAJOR_VERSION >= 9
+    v8::Local<v8::FixedArray> ImportAttributes,    // not implement yet
+#endif
+    v8::Local<v8::Module> Referrer)
 {
     auto Self = static_cast<FJsEnvImpl*>(FV8Utils::IsolateData<IObjectMapper>(Context->GetIsolate()));
     const auto ItModuleInfo = Self->FindModuleInfo(Referrer);
@@ -3682,10 +3682,17 @@ v8::MaybeLocal<v8::Module> FJsEnvImpl::FetchESModuleTree(v8::Local<v8::Context> 
 
     auto DirName = FPaths::GetPath(FileName);
 
+#if V8_MAJOR_VERSION >= 9
+    v8::Local<v8::FixedArray> module_requests = Module->GetModuleRequests();
+    for (int i = 0, Length = module_requests->Length(); i < Length; ++i)
+    {
+        v8::Local<v8::ModuleRequest> module_request = module_requests->Get(Context, i).As<v8::ModuleRequest>();
+        auto RefModuleName = FV8Utils::ToFString(Isolate, module_request->GetSpecifier());
+#else
     for (int i = 0, Length = Module->GetModuleRequestsLength(); i < Length; ++i)
     {
         auto RefModuleName = FV8Utils::ToFString(Isolate, Module->GetModuleRequest(i));
-
+#endif
         FString OutPath;
         FString OutDebugPath;
         if (ModuleLoader->Search(DirName, RefModuleName, OutPath, OutDebugPath))

@@ -19,7 +19,7 @@ var global = global || (function () { return this; }());
         get : function(classWrapers, name)
         {
             let value = classWrapers[name];
-            if (!value)
+            if (value === undefined)
             {
                 value = loadUEType(name);
                 classWrapers[name] = value;
@@ -81,7 +81,7 @@ var global = global || (function () { return this; }());
     let CPP = new Proxy(cache, {
         get: function(classWrapers, name) {
             let value = classWrapers[name];
-            if (!value)
+            if (value === undefined)
             {
                 value = loadCPPType(name);
                 classWrapers[name] = value;
@@ -337,10 +337,11 @@ var global = global || (function () { return this; }());
     cache.BuiltinByte = 1;
     cache.BuiltinInt = 2;
     cache.BuiltinFloat = 3;
-    cache.BuiltinInt64 = 4;
-    cache.BuiltinString = 5;
-    cache.BuiltinText = 6;
-    cache.BuiltinName = 7;
+    cache.BuiltinDouble = 4;
+    cache.BuiltinInt64 = 5;
+    cache.BuiltinString = 6;
+    cache.BuiltinText = 7;
+    cache.BuiltinName = 8;
     
     // call once to inject iterators to constructor
     NewArray(cache.BuiltinInt);

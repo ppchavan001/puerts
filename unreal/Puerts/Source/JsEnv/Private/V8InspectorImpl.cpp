@@ -6,13 +6,13 @@
  * which is part of this source code package.
  */
 
-#if defined(UE_GAME) || defined(UE_EDITOR)
+#if defined(UE_GAME) || defined(UE_EDITOR) || defined(UE_SERVER) || defined(USING_IN_UNREAL_ENGINE)
 #define USING_UE 1
 #else
 #define USING_UE 0
 #endif
 
-#if (PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX || WITH_INSPECTOR) && !defined(WITHOUT_INSPECTOR)
+#if (PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX || defined(WITH_INSPECTOR)) && !defined(WITHOUT_INSPECTOR)
 
 #include "V8InspectorImpl.h"
 
@@ -25,8 +25,11 @@
 #include <locale>
 #include <codecvt>
 
+PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #pragma warning(push)
+#if defined(_MSC_VER)
 #pragma warning(disable : 4251)
+#endif
 #include "v8.h"
 #include "v8-inspector.h"
 #include "libplatform/libplatform.h"
@@ -38,6 +41,7 @@
 #define _WEBSOCKETPP_CPP11_TYPE_TRAITS_
 #include "websocketpp/config/asio_no_tls.hpp"
 #include "websocketpp/server.hpp"
+PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 
 #if USING_UE
 #include "Containers/Ticker.h"
@@ -282,7 +286,8 @@ V8InspectorClientImpl::V8InspectorClientImpl(int32_t InPort, v8::Local<v8::Conte
     IsAlive = false;
     Connected = false;
 
-    CtxGroupID = 1;
+    static int32_t CurrentCtxGroupID = 1;
+    CtxGroupID = CurrentCtxGroupID++;
     const uint8_t CtxNameConst[] = "V8InspectorContext";
     v8_inspector::StringView CtxName(CtxNameConst, sizeof(CtxNameConst) - 1);
     V8Inspector = v8_inspector::V8Inspector::create(Isolate, this);

@@ -28,20 +28,24 @@
 #include "UObject/WeakFieldPtr.h"
 #endif
 
+PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #pragma warning(push, 0)
 #include "libplatform/libplatform.h"
 #include "v8.h"
 #pragma warning(pop)
+PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 
 #include "NamespaceDef.h"
 
 #include "V8InspectorImpl.h"
 
 #if defined(WITH_NODEJS)
+PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #pragma warning(push, 0)
 #include "node.h"
 #include "uv.h"
 #pragma warning(pop)
+PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #endif
 
 #if USE_WASM3
@@ -350,8 +354,11 @@ private:
 
     std::unordered_multimap<int, FModuleInfo*>::iterator FindModuleInfo(v8::Local<v8::Module> Module);
 
-    static v8::MaybeLocal<v8::Module> ResolveModuleCallback(
-        v8::Local<v8::Context> Context, v8::Local<v8::String> Specifier, v8::Local<v8::Module> Referrer);
+    static v8::MaybeLocal<v8::Module> ResolveModuleCallback(v8::Local<v8::Context> Context, v8::Local<v8::String> Specifier,
+#if V8_MAJOR_VERSION >= 9
+        v8::Local<v8::FixedArray> ImportAttributes,    // not implement yet
+#endif
+        v8::Local<v8::Module> Referrer);
 #endif
 
     struct ObjectMerger;

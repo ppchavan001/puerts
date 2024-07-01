@@ -31,7 +31,6 @@ If you want to use this feature outside of the `JsEnv` module itself, such as an
     - Find the `JsEnv.Build.cs` file and change `UseNewV8` to `true`
 - In the module's `*.Build.cs`
     - Add a dependency to the `JsEnv` module
-    - Set `bEnableUndefinedIdentifierWarnings` to `false`
 
 ## Examples
 
