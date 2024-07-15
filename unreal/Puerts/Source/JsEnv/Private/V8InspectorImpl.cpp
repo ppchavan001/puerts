@@ -158,6 +158,7 @@ void V8InspectorChannelImpl::sendNotification(std::unique_ptr<v8_inspector::Stri
 
 class V8InspectorClientImpl : public V8Inspector,
 #if USING_UE
+                              public FOutputDevice,
 #if ENGINE_MAJOR_VERSION >= 5
                               public FTSTickerObjectBase,
 #else
@@ -183,6 +184,7 @@ public:
 
 #if USING_UE
     bool Tick(float DeltaTime) override;
+    virtual void Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const class FName& Category) override;
 #else
     bool Tick(float DeltaTime);
 #endif
@@ -339,6 +341,13 @@ V8InspectorClientImpl::V8InspectorClientImpl(int32_t InPort, v8::Local<v8::Conte
                  "Please Open This URL in Debugger Front-End(e.g. Chrome DevTool):\n \n"
                  "\t%s\n \n"),
             *InspectorUrl);
+
+        if (GLog)
+        {
+            GLog->AddOutputDevice(this);
+            GLog->SerializeBacklog(this);
+        }
+
 #endif
     }
     catch (const websocketpp::exception& Exception)
@@ -354,6 +363,11 @@ V8InspectorClientImpl::V8InspectorClientImpl(int32_t InPort, v8::Local<v8::Conte
 
     IsPaused = false;
 }
+#if USING_UE
+void PUERTS_NAMESPACE::V8InspectorClientImpl::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
+{
+}
+#endif
 
 V8InspectorChannel* V8InspectorClientImpl::CreateV8InspectorChannel()
 {
@@ -363,6 +377,13 @@ V8InspectorChannel* V8InspectorClientImpl::CreateV8InspectorChannel()
 V8InspectorClientImpl::~V8InspectorClientImpl()
 {
     Close();
+
+#if USING_UE
+    if (GLog)
+    {
+        GLog->RemoveOutputDevice(this);
+    }
+#endif
 }
 
 void V8InspectorClientImpl::Close()
