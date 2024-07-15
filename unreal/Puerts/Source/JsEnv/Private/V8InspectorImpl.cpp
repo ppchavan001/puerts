@@ -366,6 +366,57 @@ V8InspectorClientImpl::V8InspectorClientImpl(int32_t InPort, v8::Local<v8::Conte
 #if USING_UE
 void PUERTS_NAMESPACE::V8InspectorClientImpl::Serialize(const TCHAR* V, ELogVerbosity::Type Verbosity, const FName& Category)
 {
+    v8::Isolate::Scope IsolateScope(Isolate);
+    v8::HandleScope HandleScope(Isolate);
+    auto context_ = Context.Get(Isolate);
+    v8::Context::Scope ContextScope(context_);
+    v8::TryCatch TryCatch(Isolate);
+
+    auto v8_Keyword = [&](const char* string) -> v8::Local<v8::String>
+    {
+        auto maybe_str = v8::String::NewFromUtf8(Isolate, string, v8::NewStringType::kInternalized);
+        return maybe_str.IsEmpty() ? v8::String::Empty(Isolate) : maybe_str.ToLocalChecked();
+    };
+
+    auto V8_FString = [&](const FString& String) -> v8::Local<v8::String>
+    {
+        auto maybe_str = v8::String::NewFromUtf8(Isolate, TCHAR_TO_UTF8(*String));
+        return maybe_str.IsEmpty() ? v8::String::Empty(Isolate) : maybe_str.ToLocalChecked();
+    };
+
+    
+    auto maybe_console = context_->Global()->Get(context_, v8_Keyword("console"));
+    if (!maybe_console.IsEmpty())
+    {
+        auto console = maybe_console.ToLocalChecked().As<v8::Object>();
+
+        v8::Local<v8::String> method = Verbosity == ELogVerbosity::Fatal || Verbosity == ELogVerbosity::Error ? v8_Keyword("error")
+                                       : Verbosity == ELogVerbosity::Warning                                  ? v8_Keyword("warn")
+                                       : Verbosity == ELogVerbosity::Display                                  ? v8_Keyword("info")
+                                                                                                              : v8_Keyword("log");
+
+       
+
+        auto maybe_function = console->Get(context_, method);
+        if (!maybe_function.IsEmpty())
+        {
+            auto function = maybe_function.ToLocalChecked().As<v8::Function>();
+
+            if (Verbosity == ELogVerbosity::Display)
+            {
+                v8::Local<v8::Value> argv[2];
+                argv[0] = V8_FString(FString::Printf(TEXT("%%c%s: %s"), *Category.ToString(), V));
+                argv[1] = V8_FString(TEXT("color:gray"));
+                function->Call(context_, console, 2, argv);
+            }
+            else
+            {
+                v8::Local<v8::Value> argv[1];
+                argv[0] = V8_FString(FString::Printf(TEXT("%s: %s"), *Category.ToString(), V));
+                function->Call(context_, console, 1, argv);
+            }
+        }
+    }
 }
 #endif
 
