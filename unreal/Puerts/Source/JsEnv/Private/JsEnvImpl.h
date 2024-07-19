@@ -86,8 +86,7 @@ public:
 
     virtual ~FJsEnvImpl() override;
 
-    virtual void Start(
-        const FString& ModuleNameOrScript, const TArray<TPair<FString, UObject*>>& Arguments, bool IsScript) override;
+    virtual void Start(const FString& ModuleNameOrScript, const TArray<TPair<FString, UObject*>>& Arguments) override;
 
     virtual bool IdleNotificationDeadline(double DeadlineInSeconds) override;
 
@@ -558,6 +557,10 @@ private:
 
     v8::Global<v8::Function> GenListApply;
 
+#if defined(WITH_V8_BYTECODE)
+    v8::Global<v8::Function> GenEmptyCode;
+#endif
+
     TMap<UStruct*, FTemplateInfo> TypeToTemplateInfoMap;
 
     TMap<FString, std::shared_ptr<FStructWrapper>> TypeReflectionMap;
@@ -747,6 +750,9 @@ private:
                 .Check();
         }
     };
+#if defined(WITH_V8_BYTECODE)
+    uint32_t Expect_FlagHash = 0;
+#endif
 };
 
 }    // namespace PUERTS_NAMESPACE

@@ -345,8 +345,7 @@ private:
     {
         static typename API::ValueType Convert(typename API::ContextType context, T ret)
         {
-            return DecayTypeConverter<typename std::remove_reference<T>::type>::toScript(
-                context, std::forward<typename std::remove_reference<T>::type>(ret));
+            return DecayTypeConverter<typename std::remove_reference<T>::type>::toScript(context, std::forward<T>(ret));
         }
     };
 
@@ -510,11 +509,12 @@ private:
 
     template <typename T>
     struct ArgumentHolder<T,
-        typename std::enable_if<ScriptTypePtrAsRef && is_script_type<typename std::remove_pointer<T>::type>::value &&
-                                !std::is_const<typename std::remove_pointer<T>::type>::value && std::is_pointer<T>::value>::type>
+        typename std::enable_if<ScriptTypePtrAsRef &&
+                                is_script_type<typename std::remove_const<typename std::remove_pointer<T>::type>::type>::value &&
+                                !API::template CustomArgumentBufferType<T>::enable && std::is_pointer<T>::value>::type>
     {
         T Arg = nullptr;
-        using BuffType = typename std::remove_pointer<T>::type;
+        using BuffType = typename std::remove_const<typename std::remove_pointer<T>::type>::type;
         BuffType Buf;
 
         ArgumentHolder(std::tuple<typename API::ContextType, typename API::ValueType> info)
@@ -535,8 +535,9 @@ private:
 
     template <typename T>
     struct ArgumentHolder<T,
-        typename std::enable_if<!ScriptTypePtrAsRef && is_script_type<typename std::remove_pointer<T>::type>::value &&
-                                !std::is_const<typename std::remove_pointer<T>::type>::value && std::is_pointer<T>::value>::type>
+        typename std::enable_if<!ScriptTypePtrAsRef &&
+                                is_script_type<typename std::remove_const<typename std::remove_pointer<T>::type>::type>::value &&
+                                !API::template CustomArgumentBufferType<T>::enable && std::is_pointer<T>::value>::type>
     {
         T Arg = nullptr;
 
