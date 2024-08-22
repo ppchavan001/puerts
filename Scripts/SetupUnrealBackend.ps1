@@ -17,22 +17,6 @@ Start-Transcript -Path $logFile
 
 #region functions
 
-function PrintError {
-    param (
-        $Message
-    )
-    Write-Host "[Error]: $Message " -ForegroundColor Red
-        
-}
-
-function PrintWarning {
-    param (
-        $Message
-    )
-    Write-Host "[Warning]: $Message " -ForegroundColor Yellow
-        
-}
-
 function PrintSuccess {
     param (
         $Message
@@ -49,13 +33,6 @@ function Print {
         
 }
 
-function ProcessWebRequest {
-    param (
-        $request
-    )
-    Print "Processing WebRequest $request" 
-    Invoke-WebRequest $request
-}
 
 # Deletes  directory
 function Delete {
@@ -70,9 +47,9 @@ function Delete {
 }
 
 function DeleteCache {
-    PrintWarning("Removing tar temp dir : $tarLoc")
+    Write-Warning("Removing tar temp dir : $tarLoc")
     Delete $tarLoc
-    PrintWarning("Removing temp dir : $tempDir")
+    Write-Warning("Removing temp dir : $tempDir")
     Delete $tempDir
 
 }
@@ -82,7 +59,7 @@ function DeleteCache {
 #region Script Start
 try {
    
-    PrintWarning("Current dir : $currentDir")
+    Write-Warning("Current dir : $currentDir")
     Print("tempDir : $tempDir")
     Print("tempFile : $tempFile")
 
@@ -115,7 +92,7 @@ try {
             $finalFile = "$downloadPath\$assetName";
         
             if (Test-Path -Path $script:finalFile -PathType Leaf) {
-                PrintWarning( "Selected file already exists in dir. Proceeding setup with it")
+                Write-Warning( "Selected file already exists in dir. Proceeding setup with it")
             }
             else {    
                 $downloadRequest = "-Uri $downloadUrl -OutFile $finalFile"
@@ -126,11 +103,11 @@ try {
             PrintSuccess "Asset file ready at : $finalFile"
         }
         catch {
-            PrintError("An error occurred while downloading '$($latestAsset.name)': $($_.Exception.Message)")
+            Write-Error("An error occurred while downloading '$($latestAsset.name)': $($_.Exception.Message)")
         }
     }
     else {
-        PrintError "No assets found in the latest release."
+        Write-Error "No assets found in the latest release."
     }
 
     #endregion
@@ -140,7 +117,7 @@ try {
 
     $downloadedFile = $finalFile
     if ($downloadedFile.Length -gt 0) {
-        PrintWarning("Downloaded file :$downloadedFile")
+        Write-Warning("Downloaded file :$downloadedFile")
     }
     else {
         throw ("Download failed or cancelled!")
