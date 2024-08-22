@@ -28,14 +28,12 @@ try {
     $inputFile.Close()
     $outputFile.Close()
     
-    # Extract the .tar file to the destination directory
+    # Extract the .tar file using the tar command
     Write-Host "Extracting $tarPath to $DestinationPath..."
-    $tarFile = [System.IO.File]::OpenRead($tarPath)
-    [System.IO.Compression.TarArchive]::ExtractToDirectory($tarFile, $DestinationPath)
-    $tarFile.Close()
+    tar -xf $tarPath -C $DestinationPath
 
     # Clean up the temporary .tar file
-    Remove-Item -Force $tarPath
+    Remove-Item -Path $tarPath -Force
     
     Write-Host "File extracted successfully to: $DestinationPath"
 }
