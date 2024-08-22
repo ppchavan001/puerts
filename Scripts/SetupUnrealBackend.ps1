@@ -6,6 +6,8 @@ $currentDir = $PSScriptRoot
 $tempDir = "$currentDir\temp"
 $tempFile = "$tempDir/pts_git_apiResponse.json"
 
+#region functions
+
 function PrintError {
     param (
         $Message
@@ -46,6 +48,29 @@ function ProcessWebRequest {
     Invoke-WebRequest $request
 }
 
+# Deletes  directory
+function Delete {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (Test-Path $Path -PathType Container) {
+        Remove-Item $Path -Recurse -Force
+    }
+}
+
+function DeleteCache {
+    PrintWarning("Removing tar temp dir : $tarLoc")
+    Delete $tarLoc
+    PrintWarning("Removing temp dir : $tempDir")
+    Delete $tempDir
+
+}
+
+#endregion
+
+#region Script Start
 
 PrintWarning("Current dir : $currentDir")
 Print("tempDir : $tempDir")
@@ -54,6 +79,8 @@ Print("tempFile : $tempFile")
 Print("Creating temp dir $tempDir")
 New-Item -ItemType Directory -Path $tempDir -Force
 Print("Created temp dir @ $tempDir")
+
+#region Download latest release
 
 $repoUrl = "https://api.github.com/repos/$repo/releases/latest"
 # Send a request to GitHub API to get information about the latest release
@@ -96,15 +123,21 @@ else {
     PrintError "No assets found in the latest release."
 }
 
+#endregion
+
+
+#region Extract
+
 $downloadedFile = $finalFile
 if ($downloadedFile.Length -gt 0) {
     PrintWarning("Downloaded file :$downloadedFile")
 }
 else {
     PrintError("Download failed or cancelled!")
+    DeleteCache
+    Start-Sleep -Seconds 30
     return
 }
-
 
 Print("Extracting file to : $tarLoc")
 
@@ -135,11 +168,7 @@ PrintSuccess("Finished copying files to $pluginTarget")
 
 PrintSuccess("pts setup successfully.")
 
-if ($false) {
-    PrintWarning("Removing temp dir : $tempDir")
-    Remove-Item $tempDir -Recurse
-}
-else {
-    PrintWarning("Removing tar temp dir : $tarLoc")
-    Remove-Item $tarLoc -Recurse
-}
+DeleteCache
+#endregion
+
+#endregion
