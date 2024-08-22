@@ -9,10 +9,11 @@ $tempFile = "$tempDir/pts_git_apiResponse.json"
 #region log file setup
 $logFile = "$currentDir\setup.log"
 if (Test-Path $logFile) {
-    Remove-Item $logFile -Force
+    Remove-Item  -Force $logFile
 }
 
 Start-Transcript -Path $logFile
+
 #endregion
 
 #region functions
@@ -41,16 +42,39 @@ function Delete {
         [string]$Path
     )
 
-    if (Test-Path $Path -PathType Container) {
-        Remove-Item $Path -Recurse -Force
+    if (![string]::IsNullOrWhiteSpace($Path) -and (Test-Path $Path -PathType Container)) {
+        Remove-Item -Recurse -Force -Path "$Path\*" 
+        Remove-Item -Recurse -Force -Path "$Path" 
     }
 }
 
 function DeleteCache {
-    Write-Warning("Removing tar temp dir : $tarLoc")
-    Delete $tarLoc
-    Write-Warning("Removing temp dir : $tempDir")
-    Delete $tempDir
+    $maxAttempts = 5
+    $attempt = 0
+    while ($attempt -lt $maxAttempts) {
+
+        try {
+        
+            if (![string]::IsNullOrWhiteSpace($tarLoc)) {
+                Write-Warning("Removing tar temp dir : $tarLoc")
+                Delete $tarLoc
+            }
+        
+            Write-Warning("Removing temp dir : $tempDir")
+            Delete $tempDir
+            $attempt = $maxAttempts
+        }
+        catch {
+            $attempt++
+            if ($attempt -lt $maxAttempts) {
+                Write-Host "Remove cache directory attempt $attempt failed. Retrying in 2 seconds..." -ForegroundColor Yellow
+                Start-Sleep -Seconds 2
+            }
+            else {
+                throw "Failed to remove cache directory after $maxAttempts attempts: $_"
+            }
+        }
+    }
 
 }
 
@@ -58,6 +82,8 @@ function DeleteCache {
 
 #region Script Start
 try {
+
+    DeleteCache
    
     Write-Warning("Current dir : $currentDir")
     Print("tempDir : $tempDir")
@@ -160,7 +186,7 @@ try {
         & $extractionScript "$downloadedFile" "$pluginTarget"
     }
 
-    PrintSuccess("pts setup successfully.")
+    PrintSuccess("pts setup successfully. Check setup.log to ensure there were no errors.")
  
 }
 catch {

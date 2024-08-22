@@ -35,7 +35,7 @@ try {
     $tarFile.Close()
 
     # Clean up the temporary .tar file
-    Remove-Item -Path $tarPath -Force
+    Remove-Item -Force $tarPath
     
     Write-Host "File extracted successfully to: $DestinationPath"
 }
