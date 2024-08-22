@@ -1,18 +1,11 @@
-
 param(
     [string]$Path,
     [string]$DestinationPath
 )
 
-$7zipPath = "C:\Program Files\7-Zip\7z.exe"
-
-if (-not (Test-Path $7zipPath)) {
-    Write-Host "Error: 7zip not found at: $7zipPath"
-    exit
-}
 # Check if the file exists
 if (-not (Test-Path $Path -PathType Leaf)) {
-    Write-Host "Error: File not found: $Path"
+    Write-Error "File not found: $Path"
     exit
 }
 
@@ -21,11 +14,31 @@ if (-not (Test-Path $DestinationPath -PathType Container)) {
     New-Item -Path $DestinationPath -ItemType Directory -Force
 }
 
-# Extract the file to the output location using 7z
+# Temporary path for the decompressed .tar file
+$tarPath = [System.IO.Path]::ChangeExtension($Path, ".tar")
+
 try {
-    &  $7zipPath x "$Path" -o"$DestinationPath" -y
+    # Decompress the .tgz (which is a .tar.gz) to a .tar file
+    Write-Host "Decompressing $Path to $tarPath..."
+    $inputFile = [System.IO.File]::OpenRead($Path)
+    $outputFile = [System.IO.File]::Create($tarPath)
+    $gzipStream = New-Object System.IO.Compression.GzipStream($inputFile, [System.IO.Compression.CompressionMode]::Decompress)
+    $gzipStream.CopyTo($outputFile)
+    $gzipStream.Close()
+    $inputFile.Close()
+    $outputFile.Close()
+    
+    # Extract the .tar file to the destination directory
+    Write-Host "Extracting $tarPath to $DestinationPath..."
+    $tarFile = [System.IO.File]::OpenRead($tarPath)
+    [System.IO.Compression.TarArchive]::ExtractToDirectory($tarFile, $DestinationPath)
+    $tarFile.Close()
+
+    # Clean up the temporary .tar file
+    Remove-Item -Path $tarPath -Force
+    
     Write-Host "File extracted successfully to: $DestinationPath"
 }
 catch {
-    Write-Host "Failed to extract file. Error: $($_.Exception.Message)"
+    Write-Error "Failed to extract file. Error: $($_.Exception.Message)"
 }
