@@ -194,6 +194,7 @@ catch {
 }
 
 DeleteCache
+Stop-Transcript
 #endregion
 
 #endregion
