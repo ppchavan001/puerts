@@ -65,31 +65,28 @@ namespace NUnit {
             // }
             public static void AreEqual(object a, object b) 
             {
-                Type aType = a.GetType();
-                Type bType = b.GetType();
-                if (
-                    (aType.IsPrimitive || aType == typeof(string)) &&
-                    (bType.IsPrimitive || bType == typeof(string))
-                )
+                bool eq = (a == null) ? b == null : a.Equals(b);
+                if (a != null && b != null) // for unity
                 {
-                    if (a.ToString() != b.ToString()) 
-                        throw new Exception($"expect {a} == {b} but failed");
-                } 
-                else if (a != b) throw new Exception($"expect {a} == {b} but failed");
+                    if (a.GetType().IsPrimitive && b.GetType().IsPrimitive || a is string && b is string)
+                    {
+                        eq = a.ToString() == b.ToString();
+                    }
+                }
+                if (!eq) throw new Exception($"expect [{a}] == [{b}]");
+                
             }
             public static void AreNotEqual(object a, object b) 
             {
-                Type aType = a.GetType();
-                Type bType = b.GetType();
-                if (
-                    (aType.IsPrimitive || aType == typeof(string)) &&
-                    (bType.IsPrimitive || bType == typeof(string))
-                )
+                bool eq = (a == null) ? b == null : a.Equals(b);
+                if (a != null && b != null) // for unity
                 {
-                    if (a.ToString() == b.ToString()) 
-                        throw new Exception($"expect {a} != {b} but failed");
-                } 
-                else if (a == b) throw new Exception($"expect {a} != {b} but failed");
+                    if (a.GetType().IsPrimitive && b.GetType().IsPrimitive || a is string && b is string)
+                    {
+                        eq = a.ToString() == b.ToString();
+                    }
+                }
+                if (eq) throw new Exception($"expect [{a}] != [{b}]");
             }
 
             public static void True(bool b)

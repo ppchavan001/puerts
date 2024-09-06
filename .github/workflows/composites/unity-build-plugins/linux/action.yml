@@ -11,6 +11,9 @@ inputs:
     options:
     - Release
     - Debug
+  websocket:
+    description: enable websocket
+    default: '0'
   GITHUB_TOKEN:
     required:
 
@@ -29,7 +32,7 @@ runs:
         cd unity
         npm i
         cd native_src
-        node ../cli make --platform linux --arch x64 --backend ${{ inputs.backend }} --config ${{ inputs.config }}
+        node ../cli make --platform linux --arch x64 --backend ${{ inputs.backend }} --config ${{ inputs.config }} --websocket ${{ inputs.websocket }}
     - name: Upload
       uses: actions/upload-artifact@v3
       with:

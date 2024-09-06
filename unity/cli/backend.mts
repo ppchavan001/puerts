@@ -3,8 +3,61 @@ import { existsSync, readFileSync, statSync } from "fs";
 import { createRequire } from "module";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import * as fs from 'fs';
+import * as path from 'path';
+import { pipeline } from 'stream';
+import { promisify } from 'util';
 
-const download = createRequire(fileURLToPath(import.meta.url))('download');
+const pipelineAsync = promisify(pipeline);
+const require = createRequire(import.meta.url);
+const tar = require('tar');
+const axios = require('axios');
+const ProgressBar = require('progress');
+
+async function downloadAndExtractTarGz(url: string, outputDir: string) {
+  const tempFilePath = path.join(outputDir, 'temp.tar.gz');
+  
+  const { headers } = await axios.head(url);
+  const totalSize = parseInt(headers['content-length'], 10);
+  
+  const progressBar = new ProgressBar('Downloading [:bar] :percent :etas', {
+    width: 40,
+    complete: '=',
+    incomplete: ' ',
+    renderThrottle: 16,
+    total: totalSize,
+  });
+
+  // Step 1: Download the tar.gz file
+  const response = await axios({
+    url,
+    method: 'GET',
+    responseType: 'stream',
+  });
+  
+  response.data.on('data', (chunk: Buffer) => {
+    progressBar.tick(chunk.length);
+  });
+  
+  // Ensure the output directory exists
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  // Step 2: Save the tar.gz file to a temporary location
+  await pipelineAsync(response.data, fs.createWriteStream(tempFilePath));
+
+  // Step 3: Extract the tar.gz file
+  await tar.x({
+    file: tempFilePath,
+    cwd: outputDir,
+  });
+
+  // Step 4: Clean up the temporary file
+  fs.unlinkSync(tempFilePath);
+
+  console.log(`Downloaded and extracted to ${outputDir}`);
+}
 
 export default async function downloadBackend(cwd: string, name: string, url: string = "") {
     if (!existsSync(join(cwd, "CMakeLists.txt"))) {
@@ -18,7 +71,7 @@ export default async function downloadBackend(cwd: string, name: string, url: st
 
     } else if (url) {
         console.log(`[Puer] downloading ${name} from ${url}`);
-        const down = download(url, backendDir, { extract: true });
+        const down = downloadAndExtractTarGz(url, backendDir);
         await down;
 
     } else {
@@ -28,7 +81,7 @@ export default async function downloadBackend(cwd: string, name: string, url: st
         }
         if (url = cfg[name].url) {
             console.log(`[Puer] downloading ${name} from ${url}`);
-            const down = download(url, backendDir, { extract: true });
+            const down = downloadAndExtractTarGz(url, backendDir);
             await down;
 
         } else {

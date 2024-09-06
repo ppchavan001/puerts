@@ -52,6 +52,8 @@ public class JsEnv : ModuleRules
     public static bool WithSourceControl = false;
 
     public bool WithByteCode = false;
+
+    private bool WithWebsocket = false;
     
     public JsEnv(ReadOnlyTargetRules Target) : base(Target)
     {
@@ -65,6 +67,13 @@ public class JsEnv : ModuleRules
         if (bEditorSuffix)
         {
             PublicDefinitions.Add("PUERTS_WITH_EDITOR_SUFFIX");
+        }
+
+        if (WithWebsocket)
+        {
+            PublicDefinitions.Add("WITH_WEBSOCKET");
+            PublicDefinitions.Add("WITH_WEBSOCKET_SSL");
+            PublicDependencyModuleNames.Add("OpenSSL");
         }
 
         ShadowVariableWarningLevel = WarningLevel.Warning;

@@ -39,6 +39,10 @@
 #endif
 #endif
 
+#if defined(WITH_WEBSOCKET)
+void InitWebsocketPPWrap(v8::Local<v8::Context> Context);
+#endif
+
 namespace PUERTS_NAMESPACE
 {
 
@@ -218,6 +222,21 @@ void FBackendEnv::GlobalPrepare()
 {
     if (!GPlatform)
     {
+        std::string Flags = "--stack_size=856";
+#if PUERTS_DEBUG
+        Flags += " --expose-gc";
+#if PLATFORM_MAC
+        Flags += " --jitless --no-expose-wasm";
+#endif
+#endif
+#if defined(PLATFORM_IOS) || defined(PLATFORM_OHOS)
+        Flags += " --jitless --no-expose-wasm";
+#endif
+#if V8_MAJOR_VERSION <= 9
+        Flags += " --no-harmony-top-level-await";
+#endif
+        v8::V8::SetFlagsFromString(Flags.c_str(), static_cast<int>(Flags.size()));
+
 #if defined(WITH_NODEJS)
         int Argc = 2;
         char* ArgvIn[] = {"puerts", "--no-harmony-top-level-await"};
@@ -343,6 +362,10 @@ void FBackendEnv::Initialize(void* external_quickjs_runtime, void* external_quic
 #else
     Global->Set(Context, v8::String::NewFromUtf8(Isolate, EXECUTEMODULEGLOBANAME).ToLocalChecked(), v8::FunctionTemplate::New(Isolate, esmodule::ExecuteModule)->GetFunction(Context).ToLocalChecked()).Check();
     Global->Set(Context, v8::String::NewFromUtf8(Isolate, "v8").ToLocalChecked(), GetV8Extras(Isolate, Context));
+#endif
+
+#if defined(WITH_WEBSOCKET)
+    InitWebsocketPPWrap(Context);
 #endif
 }
 
@@ -525,12 +548,19 @@ JSModuleDef* FBackendEnv::LoadModule(JSContext* ctx, const char *name)
         // exception from Normalize
     //    return nullptr;
     //}
+#if defined(QUICKJS_VERSION) && QUICKJS_VERSION >= 20240214
+    if (JS_HasException(ctx))
+    {
+        return nullptr;
+    }
+#else
     auto Ex = JS_GetException(ctx);
     if (!JS_IsUndefined(Ex) && !JS_IsNull(Ex))
     {
         JS_Throw(ctx, Ex);
         return nullptr;
     }
+#endif
     // quickjs本身已经做了cache，这只是为了支持ClearModuleCache ///
     auto Iter = PathToModuleMap.find(name);
     if (Iter != PathToModuleMap.end())
