@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"FriendlyName": "puer.ts",
 	"Version": 1,
-	"VersionName": "1.0.5 (2024.05.19)",
+	"VersionName": "1.0.5 (2024.09.07) with napi support",
 	"FriendlyVersion": "1.0.5",
 	"Description": "puerts Modified by @ppchavan001",
 	"Category": "Programming",
