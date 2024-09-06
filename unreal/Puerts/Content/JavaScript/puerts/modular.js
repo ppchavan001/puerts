@@ -69,6 +69,13 @@ var global = global || (function () { return this; }());
         let exports = {};
         let module = puerts.getModuleBySID(sid);
         module.exports = exports;
+
+        // Check if the file is a native module (.node extension)
+        if (fullPath.endsWith('.node'))
+        {
+            return require(fullPathInJs);
+        }
+
         let wrapped = evalScript(
             // Wrap the script in the same way NodeJS does it. It is important since IDEs (VSCode) will use this wrapper pattern
             // to enable stepping through original source in-place.
@@ -159,6 +166,29 @@ var global = global || (function () { return this; }());
             if (debugPath.startsWith("Pak: "))
             {
                 debugPath = fullPath;
+            }
+
+            // Check if the module is a native addon (.node file)
+            if (moduleName.endsWith('.node'))
+            {
+                let nativeModule = findModule(moduleName);
+                if (nativeModule)
+                {
+                    buildinModule[moduleName] = nativeModule;
+                    return nativeModule;
+                }
+
+                // Load native addon using process.dlopen
+                try
+                {
+                    const m = { exports: {} };
+                    process.dlopen(m, fullPath);
+                    localModuleCache[moduleName] = m;
+                    return m.exports;
+                } catch (e)
+                {
+                    throw new Error(`Failed to load native addon: ${moduleName} from ${fullPath}\n${e.message}`);
+                }
             }
 
             let key = fullPath;
