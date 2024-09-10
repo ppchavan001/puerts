@@ -513,8 +513,8 @@ public class JsEnv : ModuleRules
             string V8LibraryPath = Path.Combine(LibraryPath, "Win64");
             PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libnode.lib"));
 
-            RuntimeDependencies.Add("$(TargetOutputDir)/node.dll", Path.Combine(V8LibraryPath, "node.dll"));
-            AddRuntimeDependencies(new string[] { "node.dll" }, V8LibraryPath, false);
+            RuntimeDependencies.Add("$(TargetOutputDir)/libnode.dll", Path.Combine(V8LibraryPath, "libnode.dll"));
+            AddRuntimeDependencies(new string[] { "libnode.dll" }, V8LibraryPath, false);
         }
         else if (Target.Platform == UnrealTargetPlatform.Android)
         {
