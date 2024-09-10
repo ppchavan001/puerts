@@ -191,16 +191,6 @@ try {
     }
 
     PrintSuccess("pts setup successfully. Check setup.log to ensure there were no errors.")
-    
-    Write-Host "currentDir = $currentDir"
-    $dll = Resolve-Path($currentDir + "\..\unreal\Puerts\ThirdParty\nodejs_16\lib\Win64\libnode.dll")
-    Write-Host "old dll = $dll"
-
-    # Rename the DLL
-    Rename-Item -Path $dll -NewName "node.dll"
-
-    # Output the new path
-    Write-Host "DLL renamed to node.dll"
 
 }
 catch {
