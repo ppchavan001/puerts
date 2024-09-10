@@ -11,7 +11,7 @@ using System.IO;
 using System.Reflection;
 
 public class JsEnv : ModuleRules
-{    
+{
     enum SupportedV8Versions
     {
         VDeprecated, // for 4.24 or blow only
@@ -21,7 +21,7 @@ public class JsEnv : ModuleRules
         V11_8_172
     }
 
-    private SupportedV8Versions UseV8Version = 
+    private SupportedV8Versions UseV8Version =
 #if UE_4_25_OR_LATER
         SupportedV8Versions.V9_4_146_24;
 #else
@@ -37,31 +37,31 @@ public class JsEnv : ModuleRules
     private bool QjsNamespaceSuffix = false;
 
     private bool WithFFI = false;
-    
+
     private bool ForceStaticLibInEditor = false;
 
     private bool ThreadSafe = false;
 
     private bool FTextAsString = true;
-    
+
     private bool bEditorSuffix = true;
 
     // v8 9.4+
     private bool SingleThreaded = false;
-    
+
     public static bool WithSourceControl = false;
 
     public bool WithByteCode = false;
 
     private bool WithWebsocket = false;
-    
+
     public JsEnv(ReadOnlyTargetRules Target) : base(Target)
     {
         PublicDefinitions.Add("USING_IN_UNREAL_ENGINE");
         //PublicDefinitions.Add("WITH_V8_FAST_CALL");
-        
+
         PublicDefinitions.Add("TS_BLUEPRINT_PATH=\"/Blueprints/TypeScript/\"");
-        
+
         PublicDefinitions.Add(ThreadSafe ? "THREAD_SAFE" : "NOT_THREAD_SAFE");
 
         if (bEditorSuffix)
@@ -115,7 +115,7 @@ public class JsEnv : ModuleRules
         }
 
         bool bKeepUObjectReference = true;
-        if(bKeepUObjectReference)
+        if (bKeepUObjectReference)
         {
             PublicDefinitions.Add("PUERTS_KEEP_UOBJECT_REFERENCE=1");
         }
@@ -149,6 +149,7 @@ public class JsEnv : ModuleRules
 
         if (UseNodejs)
         {
+            ThirdPartyMinHook(Target);
             ThirdPartyNodejs(Target);
         }
         else if (UseQuickjs)
@@ -164,7 +165,7 @@ public class JsEnv : ModuleRules
         {
             OldThirdParty(Target);
         }
-        
+
         if (WithFFI) AddFFI(Target);
 
         string coreJSPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "Content"));
@@ -226,9 +227,9 @@ public class JsEnv : ModuleRules
                 PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libv8_libbase.a"));
                 PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libv8_libplatform.a"));
                 PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libv8_libsampler.a"));
-            } 
+            }
 #if !UE_4_22_OR_LATER
-            else if (Target.Version.MajorVersion == 4 && Target.Version.MinorVersion < 22) 
+            else if (Target.Version.MajorVersion == 4 && Target.Version.MinorVersion < 22)
             {
                 string V8LibraryPath = Path.Combine(LibraryPath, "Android", "armeabi-v7a", "7.4.288");
                 PublicLibraryPaths.Add(V8LibraryPath);
@@ -324,22 +325,22 @@ public class JsEnv : ModuleRules
         string LibraryPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "ThirdParty", "Library"));
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            PublicIncludePaths.AddRange(new string[] {Path.Combine(HeaderPath, "ffi", "Win64")});
+            PublicIncludePaths.AddRange(new string[] { Path.Combine(HeaderPath, "ffi", "Win64") });
             PublicAdditionalLibraries.Add(Path.Combine(LibraryPath, "ffi", "Win64", "ffi.lib"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
-            PublicIncludePaths.AddRange(new string[] {Path.Combine(HeaderPath, "ffi", "macOS")});
+            PublicIncludePaths.AddRange(new string[] { Path.Combine(HeaderPath, "ffi", "macOS") });
             PublicAdditionalLibraries.Add(Path.Combine(LibraryPath, "ffi", "macOS", "libffi.a"));
         }
         else if (Target.Platform == UnrealTargetPlatform.IOS)
         {
-            PublicIncludePaths.AddRange(new string[] {Path.Combine(HeaderPath, "ffi", "iOS")});
+            PublicIncludePaths.AddRange(new string[] { Path.Combine(HeaderPath, "ffi", "iOS") });
             PublicAdditionalLibraries.Add(Path.Combine(LibraryPath, "ffi", "iOS", "libffi.a"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Android)
         {
-            PublicIncludePaths.AddRange(new string[] {Path.Combine(HeaderPath, "ffi", "Android")});
+            PublicIncludePaths.AddRange(new string[] { Path.Combine(HeaderPath, "ffi", "Android") });
             PublicAdditionalLibraries.Add(Path.Combine(LibraryPath, "ffi", "Android", "armeabi-v7a", "libffi.a"));
             PublicAdditionalLibraries.Add(Path.Combine(LibraryPath, "ffi", "Android", "arm64-v8a", "libffi.a"));
         }
@@ -351,7 +352,7 @@ public class JsEnv : ModuleRules
     {
         foreach (var DllName in DllNames)
         {
-            if(Delay) PublicDelayLoadDLLs.Add(DllName);
+            if (Delay) PublicDelayLoadDLLs.Add(DllName);
             var DllPath = Path.Combine(LibraryPath, DllName);
             var DestDllPath = Path.Combine("$(BinaryOutputDir)", DllName);
             RuntimeDependencies.Add(DestDllPath, DllPath, StagedFileType.NonUFS);
@@ -373,7 +374,7 @@ public class JsEnv : ModuleRules
 
         AddRuntimeDependencies(deps.ToArray(), V8LibraryPath, false);
     }
-    
+
     void MacDylib(string LibraryPath)
     {
         PublicAdditionalLibraries.Add(Path.Combine(LibraryPath, "libv8.dylib"));
@@ -399,10 +400,10 @@ public class JsEnv : ModuleRules
         }
 
         string v8LibSuffix = "";
-        
+
         if (UseV8Version == SupportedV8Versions.V8_4_371_19)
         {
-            if(Directory.Exists(Path.Combine(ModuleDirectory, "..", "..", "ThirdParty", "v8_8.4.371.19")))
+            if (Directory.Exists(Path.Combine(ModuleDirectory, "..", "..", "ThirdParty", "v8_8.4.371.19")))
             {
                 v8LibSuffix = "_8.4.371.19";
             }
@@ -436,7 +437,7 @@ public class JsEnv : ModuleRules
                 string V8LibraryPath = Path.Combine(LibraryPath, "Win64MD");
                 PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "wee8.lib"));
             }
-            else 
+            else
             {
                 WinDll(LibraryPath);
             }
@@ -480,8 +481,8 @@ public class JsEnv : ModuleRules
             PublicFrameworks.AddRange(new string[] { "WebKit" });
             string V8LibraryPath = Path.Combine(LibraryPath, "iOS", "arm64");
             PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libwee8.a"));
-        } 
-        else if (Target.Platform == UnrealTargetPlatform.Linux) 
+        }
+        else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             string V8LibraryPath = Path.Combine(LibraryPath, "Linux");
             PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libwee8.a"));
@@ -492,7 +493,23 @@ public class JsEnv : ModuleRules
             PrivateDefinitions.Add("FORCE_USE_STATIC_V8_LIB");
         }
     }
-    
+
+    void ThirdPartyMinHook(ReadOnlyTargetRules Target)
+    {
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            PrivateDefinitions.Add("WITH_MINHOOK");
+            string ThirdPartyDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "ThirdParty"));
+            PublicIncludePaths.AddRange(new string[] { Path.Combine(ThirdPartyDir, "minhook", "include") });
+
+            string bin = Path.Combine(ThirdPartyDir, "minhook", "bin");
+            PublicAdditionalLibraries.Add(Path.Combine(bin, "MinHook.x64.lib"));
+
+            RuntimeDependencies.Add("$(TargetOutputDir)/MinHook.x64.dll", Path.Combine(bin, "MinHook.x64.dll"));
+            AddRuntimeDependencies(new string[] { "MinHook.x64.dll" }, bin, false);
+        }
+    }
+
     void ThirdPartyNodejs(ReadOnlyTargetRules Target)
     {
         PrivateDefinitions.Add("WITH_NODEJS");
@@ -534,7 +551,7 @@ public class JsEnv : ModuleRules
                         PublicAdditionalLibraries.Add("node");
             #endif  //UE_4_24_OR_LATER
             */
-            
+
             string[] Archs = new string[] { "armeabi-v7a", "arm64-v8a" };
             foreach (var Arch in Archs)
             {
@@ -561,7 +578,7 @@ public class JsEnv : ModuleRules
                     PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libv8_libsampler.a"));
                 }
             }
-            
+
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
@@ -600,8 +617,8 @@ public class JsEnv : ModuleRules
             {
                 PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libv8_libsampler.a"));
             }
-        } 
-        else if (Target.Platform == UnrealTargetPlatform.Linux) 
+        }
+        else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             string V8LibraryPath = Path.Combine(LibraryPath, "Linux");
             PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libnode.so"));
@@ -674,8 +691,8 @@ public class JsEnv : ModuleRules
             }
             else
             {
-               string V8LibraryPath = Path.Combine(LibraryPath, "macOSdylib");
-               string QJSDylibName = "libquickjs.dylib";
+                string V8LibraryPath = Path.Combine(LibraryPath, "macOSdylib");
+                string QJSDylibName = "libquickjs.dylib";
 #if UE_5_2_OR_LATER
                 if (Target.Architecture == UnrealArch.Arm64)
                 {
