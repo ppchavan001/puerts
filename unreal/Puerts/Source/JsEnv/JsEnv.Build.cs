@@ -32,7 +32,7 @@ public class JsEnv : ModuleRules
 
     private bool Node16 = true;
 
-    private bool SupportNodeAPI = true; // only works with node backend
+    private bool SupportNodeAPI = true;
 
     private bool UseQuickjs = false;
 
@@ -155,7 +155,7 @@ public class JsEnv : ModuleRules
 
             if (SupportNodeAPI)
             {
-                ThirdPartyMinHook(Target);
+                NodeAPIHookSetup(Target);
             }
         }
         else if (UseQuickjs)
@@ -617,7 +617,7 @@ public class JsEnv : ModuleRules
     }
 
 
-    void ThirdPartyMinHook(ReadOnlyTargetRules Target)
+    void NodeAPIHookSetup(ReadOnlyTargetRules Target)
     {
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
