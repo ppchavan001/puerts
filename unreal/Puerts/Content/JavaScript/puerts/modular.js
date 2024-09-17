@@ -138,17 +138,7 @@ var global = global || (function () { return this; }());
             }
             moduleName = normalize(moduleName);
             let forceReload = false;
-            if ((moduleName in localModuleCache))
-            {
-                let m = localModuleCache[moduleName];
-                if (!m.__forceReload)
-                {
-                    return localModuleCache[moduleName].exports;
-                } else
-                {
-                    forceReload = true;
-                }
-            }
+
             if (moduleName in buildinModule) return buildinModule[moduleName];
             let nativeModule = findModule(moduleName);
             if (nativeModule)
@@ -163,6 +153,19 @@ var global = global || (function () { return this; }());
             }
 
             let [fullPath, debugPath] = moduleInfo;
+
+            if (moduleName in localModuleCache)
+            {
+                let m = localModuleCache[fullPath];
+                if (!m.__forceReload)
+                {
+                    return localModuleCache[fullPath].exports;
+                } else
+                {
+                    forceReload = true;
+                }
+            }
+
             if (debugPath.startsWith("Pak: "))
             {
                 debugPath = fullPath;
@@ -183,7 +186,7 @@ var global = global || (function () { return this; }());
                 {
                     const m = { exports: {} };
                     process.dlopen(m, fullPath);
-                    localModuleCache[moduleName] = m;
+                    localModuleCache[fullPath] = m;
                     return m.exports;
                 } catch (e)
                 {
@@ -194,11 +197,16 @@ var global = global || (function () { return this; }());
             let key = fullPath;
             if ((key in moduleCache) && !forceReload)
             {
-                localModuleCache[moduleName] = moduleCache[key];
-                return localModuleCache[moduleName].exports;
+                localModuleCache[fullPath] = moduleCache[key];
+                // if require("../package.json"), return package.json as object
+                if (moduleName.endsWith("package.json"))
+                {
+                    return JSON.parse(loadModule(fullPath));
+                }
+                return localModuleCache[fullPath].exports;
             }
             let m = { "exports": {} };
-            localModuleCache[moduleName] = m;
+            localModuleCache[fullPath] = m;
             moduleCache[key] = m;
             let sid = addModule(m);
             let isESM = outerIsESM === true || fullPath.endsWith(".mjs") || fullPath.endsWith(".mbc");
@@ -222,12 +230,20 @@ var global = global || (function () { return this; }());
                         let url = packageConfigure.main || "index.js";
                         if (isESM)
                         {
-                            let packageExports = packageConfigure.exports && packageConfigure.exports["."];
+                            let packageExports = packageConfigure.exports?.["."];
                             if (packageExports)
-                                url =
-                                    (packageExports["default"] && packageExports["default"]["require"]) ||
-                                    (packageExports["require"] && packageExports["require"]["default"]) ||
-                                    packageExports["require"];
+                            {
+                                if (Array.isArray(packageExports))
+                                {
+                                    // Handle array format for exports
+                                    let exportEntry = packageExports.find(entry => entry.require || entry.import);
+                                    url = exportEntry ? (exportEntry.require || exportEntry.import) : url;
+                                } else if (typeof packageExports === "object")
+                                {
+                                    // Handle object format for exports
+                                    url = packageExports.require || packageExports.default || url;
+                                }
+                            }
                             if (!url)
                             {
                                 throw new Error("can not require a esm in cjs module!");
@@ -252,7 +268,7 @@ var global = global || (function () { return this; }());
                 }
             } catch (e)
             {
-                localModuleCache[moduleName] = undefined;
+                localModuleCache[fullPath] = undefined;
                 moduleCache[key] = undefined;
                 throw e;
             } finally
