@@ -6,77 +6,95 @@
 */
 
 var global = global || (function () { return this; }());
-(function (global) {
+(function (global)
+{
     "use strict";
     let puerts = global.puerts = global.puerts || {};
-    
+
     let sendRequestSync = puerts.sendRequestSync;
 
-    function normalize(name) {
-        if ('./' === name.substr(0,2)) {
+    function normalize(name)
+    {
+        if ('./' === name.substr(0, 2))
+        {
             name = name.substr(2);
         }
         return name;
     }
 
-    let evalScript = global.__tgjsEvalScript || function(script, debugPath) {
+    let evalScript = global.__tgjsEvalScript || function (script, debugPath)
+    {
         return eval(script);
-    }
+    };
     global.__tgjsEvalScript = undefined;
-    
+
     let loadModule = global.__tgjsLoadModule;
     global.__tgjsLoadModule = undefined;
-    
+
     let searchModule = global.__tgjsSearchModule;
     global.__tgjsSearchModule = undefined;
-    
+
     let org_require = global.require;
-    
+
     let findModule = global.__tgjsFindModule;
     global.__tgjsFindModule = undefined;
-    
+
     let tmpModuleStorage = [];
-    
-    function addModule(m) {
-        for (var i = 0; i < tmpModuleStorage.length; i++) {
-            if (!tmpModuleStorage[i]) {
+
+    function addModule(m)
+    {
+        for (var i = 0; i < tmpModuleStorage.length; i++)
+        {
+            if (!tmpModuleStorage[i])
+            {
                 tmpModuleStorage[i] = m;
                 return i;
             }
         }
         return tmpModuleStorage.push(m) - 1;
     }
-    
-    function getModuleBySID(id) {
+
+    function getModuleBySID(id)
+    {
         return tmpModuleStorage[id];
     }
 
     let moduleCache = Object.create(null);
     let buildinModule = Object.create(null);
-    function executeModule(fullPath, script, debugPath, sid, isESM, bytecode) {
+    function executeModule(fullPath, script, debugPath, sid, isESM, bytecode)
+    {
         sid = (typeof sid == 'undefined') ? 0 : sid;
         let fullPathInJs = fullPath.replace(/\\/g, '\\\\');
         let fullDirInJs = (fullPath.indexOf('/') != -1) ? fullPath.substring(0, fullPath.lastIndexOf("/")) : fullPath.substring(0, fullPath.lastIndexOf("\\")).replace(/\\/g, '\\\\');
         let exports = {};
         let module = puerts.getModuleBySID(sid);
         module.exports = exports;
+
+        // Check if the file is a native module (.node extension)
+        if (fullPath.endsWith('.node'))
+        {
+            return require(fullPathInJs);
+        }
+
         let wrapped = evalScript(
             // Wrap the script in the same way NodeJS does it. It is important since IDEs (VSCode) will use this wrapper pattern
             // to enable stepping through original source in-place.
-            (isESM || bytecode) ? script: "(function (exports, require, module, __filename, __dirname) { " + script + "\n});", 
+            (isESM || bytecode) ? script : "(function (exports, require, module, __filename, __dirname) { " + script + "\n});",
             debugPath, isESM, fullPath, bytecode
-        )
+        );
         if (isESM) return wrapped;
-        wrapped(exports, puerts.genRequire(fullDirInJs), module, fullPathInJs, fullDirInJs)
+        wrapped(exports, puerts.genRequire(fullDirInJs), module, fullPathInJs, fullDirInJs);
         return module.exports;
     }
-    
-    function getESMMain(script) {
+
+    function getESMMain(script)
+    {
         let packageConfigure = JSON.parse(script);
         return (packageConfigure && packageConfigure.type === "module") ? packageConfigure.main : undefined;
     }
-    
-    function getSourceLengthFromBytecode(buf, isESM) {
+
+    function getSourceLengthFromBytecode(buf, isESM)
+    {
         let sourceHash = (new Uint32Array(buf))[2];
         //console.log(`sourceHash:${sourceHash}`);
         const kModuleFlagMask = (1 << 31);
@@ -87,109 +105,174 @@ var global = global || (function () { return this; }());
 
         return length;
     }
-    
-    let baseString
-    function generateEmptyCode(length) {
-        if (baseString === undefined) {
-            baseString = " ".repeat(128*1024);
+
+    let baseString;
+    function generateEmptyCode(length)
+    {
+        if (baseString === undefined)
+        {
+            baseString = " ".repeat(128 * 1024);
         }
-        if (length <= baseString.length) {
+        if (length <= baseString.length)
+        {
             return baseString.slice(0, length);
-        } else {
+        } else
+        {
             const fullString = baseString.repeat(Math.floor(length / baseString.length));
             const remainingLength = length % baseString.length;
             return fullString.concat(baseString.slice(0, remainingLength));
         }
     }
-    
-    function genRequire(requiringDir, outerIsESM) {
+
+    function genRequire(requiringDir, outerIsESM)
+    {
         let localModuleCache = Object.create(null);
-        function require(moduleName) {
-            if (org_require) {
-                try {
+        function require(moduleName)
+        {
+            if (org_require)
+            {
+                try
+                {
                     return org_require(moduleName);
-                } catch (e) {}
+                } catch (e) { }
             }
             moduleName = normalize(moduleName);
             let forceReload = false;
-            if ((moduleName in localModuleCache)) {
-                let m = localModuleCache[moduleName];
-                if (!m.__forceReload) {
-                    return localModuleCache[moduleName].exports;
-                } else {
-                    forceReload = true;
-                }
-            }
+
             if (moduleName in buildinModule) return buildinModule[moduleName];
             let nativeModule = findModule(moduleName);
-            if (nativeModule) {
+            if (nativeModule)
+            {
                 buildinModule[moduleName] = nativeModule;
                 return nativeModule;
             }
             let moduleInfo = searchModule(moduleName, requiringDir);
-            if (!moduleInfo) {
+            if (!moduleInfo)
+            {
                 throw new Error(`can not find ${moduleName} in ${requiringDir}`);
             }
-            
+
             let [fullPath, debugPath] = moduleInfo;
-            if(debugPath.startsWith("Pak: ")){
-                debugPath = fullPath
+
+            if (moduleName in localModuleCache)
+            {
+                let m = localModuleCache[fullPath];
+                if (!m.__forceReload)
+                {
+                    return localModuleCache[fullPath].exports;
+                } else
+                {
+                    forceReload = true;
+                }
             }
-            
+
+            if (debugPath.startsWith("Pak: "))
+            {
+                debugPath = fullPath;
+            }
+
+            // Check if the module is a native addon (.node file)
+            if (moduleName.endsWith('.node'))
+            {
+                let nativeModule = findModule(moduleName);
+                if (nativeModule)
+                {
+                    buildinModule[moduleName] = nativeModule;
+                    return nativeModule;
+                }
+
+                // Load native addon using process.dlopen
+                try
+                {
+                    const m = { exports: {} };
+                    process.dlopen(m, fullPath);
+                    localModuleCache[fullPath] = m;
+                    return m.exports;
+                } catch (e)
+                {
+                    throw new Error(`Failed to load native addon: ${moduleName} from ${fullPath}\n${e.message}`);
+                }
+            }
+
             let key = fullPath;
-            if ((key in moduleCache) && !forceReload) {
-                localModuleCache[moduleName] = moduleCache[key];
-                return localModuleCache[moduleName].exports;
+            if ((key in moduleCache) && !forceReload)
+            {
+                localModuleCache[fullPath] = moduleCache[key];
+                // if require("../package.json"), return package.json as object
+                if (moduleName.endsWith("package.json"))
+                {
+                    return JSON.parse(loadModule(fullPath));
+                }
+                return localModuleCache[fullPath].exports;
             }
-            let m = {"exports":{}};
-            localModuleCache[moduleName] = m;
+            let m = { "exports": {} };
+            localModuleCache[fullPath] = m;
             moduleCache[key] = m;
             let sid = addModule(m);
             let isESM = outerIsESM === true || fullPath.endsWith(".mjs") || fullPath.endsWith(".mbc");
             if (fullPath.endsWith(".cjs") || fullPath.endsWith(".cbc")) isESM = false;
             let script = isESM ? undefined : loadModule(fullPath);
             let bytecode = undefined;
-            if (fullPath.endsWith(".mbc") || fullPath.endsWith(".cbc")) {
+            if (fullPath.endsWith(".mbc") || fullPath.endsWith(".cbc"))
+            {
                 bytecode = script;
                 script = generateEmptyCode(getSourceLengthFromBytecode(bytecode));
             }
-            try {
-                if (fullPath.endsWith(".json")) {
+            try
+            {
+                if (fullPath.endsWith(".json"))
+                {
                     let packageConfigure = JSON.parse(script);
-                    
-                    if (fullPath.endsWith("package.json")) {
-                        isESM = packageConfigure.type === "module"
+
+                    if (fullPath.endsWith("package.json"))
+                    {
+                        isESM = packageConfigure.type === "module";
                         let url = packageConfigure.main || "index.js";
-                        if (isESM) {
-                            let packageExports = packageConfigure.exports && packageConfigure.exports["."];
+                        if (isESM)
+                        {
+                            let packageExports = packageConfigure.exports?.["."];
                             if (packageExports)
-                                url =
-                                    (packageExports["default"] && packageExports["default"]["require"]) ||
-                                    (packageExports["require"] && packageExports["require"]["default"]) ||
-                                    packageExports["require"];                        
-                            if (!url) {
+                            {
+                                if (Array.isArray(packageExports))
+                                {
+                                    // Handle array format for exports
+                                    let exportEntry = packageExports.find(entry => entry.require || entry.import);
+                                    url = exportEntry ? (exportEntry.require || exportEntry.import) : url;
+                                } else if (typeof packageExports === "object")
+                                {
+                                    // Handle object format for exports
+                                    url = packageExports.require || packageExports.default || url;
+                                }
+                            }
+                            if (!url)
+                            {
                                 throw new Error("can not require a esm in cjs module!");
                             }
                         }
                         let fullDirInJs = (fullPath.indexOf('/') != -1) ? fullPath.substring(0, fullPath.lastIndexOf("/")) : fullPath.substring(0, fullPath.lastIndexOf("\\")).replace(/\\/g, '\\\\');
                         let tmpRequire = genRequire(fullDirInJs, isESM);
                         let r = tmpRequire(url);
-                        
+
                         m.exports = r;
-                    } else {
+                    } else
+                    {
                         m.exports = packageConfigure;
                     }
-                } else {
+                } else
+                {
                     let r = executeModule(fullPath, script, debugPath, sid, isESM, bytecode);
-                    if (isESM) {
+                    if (isESM)
+                    {
                         m.exports = r;
                     }
                 }
-            } catch(e) {
-                localModuleCache[moduleName] = undefined;
+            } catch (e)
+            {
+                localModuleCache[fullPath] = undefined;
                 moduleCache[key] = undefined;
                 throw e;
-            } finally {
+            } finally
+            {
                 tmpModuleStorage[sid] = undefined;
             }
             return m.exports;
@@ -197,54 +280,62 @@ var global = global || (function () { return this; }());
 
         return require;
     }
-    
-    function registerBuildinModule(name, module) {
+
+    function registerBuildinModule(name, module)
+    {
         buildinModule[name] = module;
     }
-    
-    function forceReload(reloadModuleKey) {
-        if (reloadModuleKey) {
+
+    function forceReload(reloadModuleKey)
+    {
+        if (reloadModuleKey)
+        {
             reloadModuleKey = normalize(reloadModuleKey);
         }
         let reloaded = false;
-        for(var moduleKey in moduleCache) {
-            if (!reloadModuleKey || (reloadModuleKey == moduleKey)) {
+        for (var moduleKey in moduleCache)
+        {
+            if (!reloadModuleKey || (reloadModuleKey == moduleKey))
+            {
                 moduleCache[moduleKey].__forceReload = true;
                 reloaded = true;
                 if (reloadModuleKey) break;
             }
         }
-        if (!reloaded && reloadModuleKey) {
+        if (!reloaded && reloadModuleKey)
+        {
             console.warn(`reload not loaded module: ${reloadModuleKey}!`);
         }
     }
-    
-    function getModuleByUrl(url) {
-        if (url) {
+
+    function getModuleByUrl(url)
+    {
+        if (url)
+        {
             url = normalize(url);
             return moduleCache[url];
         }
     }
-    
-    registerBuildinModule("puerts", puerts)
+
+    registerBuildinModule("puerts", puerts);
 
     puerts.genRequire = genRequire;
-    
+
     puerts.getESMMain = getESMMain;
-    
+
     puerts.__require = genRequire("");
-    
+
     global.require = puerts.__require;
-    
+
     puerts.getModuleBySID = getModuleBySID;
-    
+
     puerts.registerBuildinModule = registerBuildinModule;
 
     puerts.loadModule = loadModule;
-    
+
     puerts.forceReload = forceReload;
-    
+
     puerts.getModuleByUrl = getModuleByUrl;
-    
+
     puerts.generateEmptyCode = generateEmptyCode;
 }(global));

@@ -7,7 +7,7 @@
  */
 
 #include "JsEnvModule.h"
-//#include "TGameJSCorePCH.h"
+// #include "TGameJSCorePCH.h"
 #include "HAL/MemoryBase.h"
 #include "NamespaceDef.h"
 PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
@@ -20,6 +20,11 @@ PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #pragma warning(push, 0)
 #include "v8.h"
 #include "libplatform/libplatform.h"
+
+#ifdef WITH_NODEAPI
+#include <NodeAPI/NodeAPIHook.cpp>
+#endif    // WITH_NODEAPI
+
 #pragma warning(pop)
 PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 
@@ -169,6 +174,10 @@ IMPLEMENT_MODULE(FJsEnvModule, JsEnv)
 
 void FJsEnvModule::StartupModule()
 {
+#ifdef WITH_NODEAPI
+    InitHooks();
+#endif    // WITH_NODEAPI
+
     int* Dummy = new (std::nothrow) int[0];
     if (!Dummy)
     {
@@ -241,6 +250,10 @@ void FJsEnvModule::StartupModule()
 
 void FJsEnvModule::ShutdownModule()
 {
+#ifdef WITH_NODEAPI
+    CleanupHooks();
+#endif    // WITH_NODEAPI
+
     // This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
     // we call this function before unloading the module.
     v8::V8::Dispose();
