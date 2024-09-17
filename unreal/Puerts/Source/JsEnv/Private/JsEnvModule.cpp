@@ -20,6 +20,11 @@ PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #pragma warning(push, 0)
 #include "v8.h"
 #include "libplatform/libplatform.h"
+
+#ifdef WITH_NODEAPI
+#include <NodeAPI/NodeAPIHook.cpp>
+#endif    // WITH_NODEAPI
+
 #pragma warning(pop)
 PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 
@@ -167,55 +172,11 @@ private:
 
 IMPLEMENT_MODULE(FJsEnvModule, JsEnv)
 
-#include <windows.h>
-#include <map>
-#include "MinHook.h"
-
-// Original function pointers
-static FARPROC(WINAPI* OriginalGetProcAddress)(HMODULE, LPCSTR) = GetProcAddress;
-static HMODULE libnode = 0;
-
-// Hooked GetProcAddress function
-FARPROC WINAPI HookedGetProcAddress(HMODULE hModule, LPCSTR lpProcName)
-{
-    // Optionally add custom logic for symbol resolution if needed
-    auto original = OriginalGetProcAddress(hModule, lpProcName);
-    if (original)
-    {
-        return original;
-    }
-
-    if (libnode)
-    {
-        return OriginalGetProcAddress(libnode, lpProcName);
-    }
-
-    return original;
-}
-
-// Initialize MinHook and set hooks
-void InitializeMinHook()
-{
-    libnode = LoadLibraryA("libnode.dll");
-
-    MH_Initialize();
-
-    // Hook GetProcAddress
-    MH_CreateHook(&GetProcAddress, &HookedGetProcAddress, reinterpret_cast<void**>(&OriginalGetProcAddress));
-
-    MH_EnableHook(MH_ALL_HOOKS);
-}
-
-// Cleanup hooks
-void CleanupMinHook()
-{
-    MH_DisableHook(MH_ALL_HOOKS);
-    MH_Uninitialize();
-}
-
 void FJsEnvModule::StartupModule()
 {
-    InitializeMinHook();
+#ifdef WITH_NODEAPI
+    InitHooks();
+#endif    // WITH_NODEAPI
 
     int* Dummy = new (std::nothrow) int[0];
     if (!Dummy)
@@ -289,7 +250,9 @@ void FJsEnvModule::StartupModule()
 
 void FJsEnvModule::ShutdownModule()
 {
-    CleanupMinHook();
+#ifdef WITH_NODEAPI
+    CleanupHooks();
+#endif    // WITH_NODEAPI
 
     // This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
     // we call this function before unloading the module.
