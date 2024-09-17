@@ -32,6 +32,8 @@ public class JsEnv : ModuleRules
 
     private bool Node16 = true;
 
+    private bool SupportNodeAPI = true; // only works with node backend
+
     private bool UseQuickjs = false;
 
     private bool QjsNamespaceSuffix = false;
@@ -149,8 +151,12 @@ public class JsEnv : ModuleRules
 
         if (UseNodejs)
         {
-            ThirdPartyMinHook(Target);
             ThirdPartyNodejs(Target);
+
+            if (SupportNodeAPI)
+            {
+                ThirdPartyMinHook(Target);
+            }
         }
         else if (UseQuickjs)
         {
@@ -494,22 +500,6 @@ public class JsEnv : ModuleRules
         }
     }
 
-    void ThirdPartyMinHook(ReadOnlyTargetRules Target)
-    {
-        if (Target.Platform == UnrealTargetPlatform.Win64)
-        {
-            PrivateDefinitions.Add("WITH_MINHOOK");
-            string ThirdPartyDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "ThirdParty"));
-            PublicIncludePaths.AddRange(new string[] { Path.Combine(ThirdPartyDir, "minhook", "include") });
-
-            string bin = Path.Combine(ThirdPartyDir, "minhook", "bin");
-            PublicAdditionalLibraries.Add(Path.Combine(bin, "MinHook.x64.lib"));
-
-            RuntimeDependencies.Add("$(TargetOutputDir)/MinHook.x64.dll", Path.Combine(bin, "MinHook.x64.dll"));
-            AddRuntimeDependencies(new string[] { "MinHook.x64.dll" }, bin, false);
-        }
-    }
-
     void ThirdPartyNodejs(ReadOnlyTargetRules Target)
     {
         PrivateDefinitions.Add("WITH_NODEJS");
@@ -623,6 +613,24 @@ public class JsEnv : ModuleRules
             string V8LibraryPath = Path.Combine(LibraryPath, "Linux");
             PublicAdditionalLibraries.Add(Path.Combine(V8LibraryPath, "libnode.so"));
             RuntimeDependencies.Add("$(TargetOutputDir)/libnode.so.93", Path.Combine(V8LibraryPath, "libnode.so.93"));
+        }
+    }
+
+
+    void ThirdPartyMinHook(ReadOnlyTargetRules Target)
+    {
+        if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            PrivateDefinitions.Add("WITH_NODEAPI");
+            PrivateDefinitions.Add("NODEAPI_WITH_MINHOOK");
+            string ThirdPartyDir = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "ThirdParty"));
+            PublicIncludePaths.AddRange(new string[] { Path.Combine(ThirdPartyDir, "minhook", "include") });
+
+            string bin = Path.Combine(ThirdPartyDir, "minhook", "bin");
+            PublicAdditionalLibraries.Add(Path.Combine(bin, "MinHook.x64.lib"));
+
+            RuntimeDependencies.Add("$(TargetOutputDir)/MinHook.x64.dll", Path.Combine(bin, "MinHook.x64.dll"));
+            AddRuntimeDependencies(new string[] { "MinHook.x64.dll" }, bin, false);
         }
     }
 
