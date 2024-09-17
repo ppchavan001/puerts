@@ -68,9 +68,11 @@ bool DefaultJSModuleLoader::SearchModuleInDir(
     const FString& Dir, const FString& RequiredModule, FString& Path, FString& AbsolutePath)
 {
     FString Extension = FPaths::GetExtension(RequiredModule);
-    bool IsJs = Extension == TEXT("js") || Extension == TEXT("mjs") || Extension == TEXT("cjs") || Extension == TEXT("json") ||
-                Extension == TEXT("node");
-
+    bool IsJs = Extension == TEXT("js") || Extension == TEXT("mjs") || Extension == TEXT("cjs") || Extension == TEXT("json")
+#ifdef WITH_NODEAPI
+                || Extension == TEXT("node")
+#endif    // WITH_NODEAPI
+        ;
     if (IsJs && SearchModuleWithExtInDir(Dir, RequiredModule, Path, AbsolutePath))
     {
         return true;
