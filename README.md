@@ -1,6 +1,7 @@
 ## Changes Compared to the original
 
 -   Using node.js as default backend
+-   Supports Node API (napi) on Windows x64 Unreal Engine (tested on UE 5.2)
 -   Added some scripts to automate backend download
 -   Converting all ts functions in a class to UFunctions when using makeUClass in ts
 -   default branch for this fork is 'pts-master'
