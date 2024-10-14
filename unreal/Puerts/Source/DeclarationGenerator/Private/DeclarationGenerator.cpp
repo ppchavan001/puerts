@@ -1141,7 +1141,7 @@ void FTypeScriptDeclarationGenerator::GenResolvedFunctions(UStruct* Struct, FStr
                     if (!DocString.IsEmpty())
                     {
                         DocString = DocString.Replace(TEXT("/"), TEXT("_"));
-                        Buff << "    /*\n";
+                        Buff << "    /**\n";
                         FStringBuffer tmp;
                         tmp << DocString << "\n";
                         Buff.Indent(4);
