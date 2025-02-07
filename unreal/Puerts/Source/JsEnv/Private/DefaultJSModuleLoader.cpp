@@ -78,9 +78,9 @@ bool DefaultJSModuleLoader::SearchModuleInDir(
         return true;
     }
 
-    return SearchModuleWithExtInDir(Dir, RequiredModule + ".js", Path, AbsolutePath) ||
+    return SearchModuleWithExtInDir(Dir, RequiredModule + ".cjs", Path, AbsolutePath) ||
            SearchModuleWithExtInDir(Dir, RequiredModule + ".mjs", Path, AbsolutePath) ||
-           SearchModuleWithExtInDir(Dir, RequiredModule + ".cjs", Path, AbsolutePath) ||
+           SearchModuleWithExtInDir(Dir, RequiredModule + ".js", Path, AbsolutePath) ||
 #if defined(WITH_V8_BYTECODE)
            SearchModuleWithExtInDir(Dir, RequiredModule + ".mbc", Path, AbsolutePath) ||
            SearchModuleWithExtInDir(Dir, RequiredModule + ".cbc", Path, AbsolutePath) ||
