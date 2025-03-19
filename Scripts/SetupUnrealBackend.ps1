@@ -1,5 +1,3 @@
-
-
 $repo = "puerts/backend-nodejs"
 # $repo = "puerts/backend-quickjs"
 $currentDir = $PSScriptRoot
@@ -206,6 +204,7 @@ try {
 }
 catch {
     Write-Error "Failed to extract file. Error: $($_.Exception.Message)"
+    Pause
 }
 
 DeleteCache
