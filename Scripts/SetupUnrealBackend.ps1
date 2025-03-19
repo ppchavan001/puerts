@@ -84,6 +84,17 @@ function DeleteCache {
 try {
 
     DeleteCache
+    
+    $nodejsPath = Join-Path -Path $PSScriptRoot -ChildPath "..\unreal\Puerts\ThirdParty\nodejs_16"
+    $nodejsPath = Resolve-Path -Path $nodejsPath
+
+    Write-Warning("NodeJS lib path [$nodejsPath]")
+    if (Test-Path -Path $nodejsPath -PathType Container) {
+        if ((Get-ChildItem -Path $nodejsPath).Count -gt 0) {
+            Write-Warning "Exiting: ['$nodejsPath'] is not empty. Exiting nodejs lib setup!"
+            exit 1
+        }
+    }
    
     Write-Warning("Current dir : $currentDir")
     Print("tempDir : $tempDir")
