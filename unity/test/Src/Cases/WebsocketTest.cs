@@ -57,6 +57,17 @@ namespace Puerts.UnitTest
             await _webSocket.SendAsync(new ArraySegment<byte>(responseBuffer), WebSocketMessageType.Text, true, CancellationToken.None);
             Console.WriteLine($"Sent message to client: {message}");
         }
+        
+        public async Task SendAsync(byte[] buffer)
+        {
+            if (buffer == null || buffer.Length == 0)
+            {
+                throw new ArgumentException("Buffer cannot be null or empty.", nameof(buffer));
+            }
+
+            await _webSocket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Binary, true, CancellationToken.None);
+            Console.WriteLine($"Sent binary data to client: {BitConverter.ToString(buffer)}");
+        }
 
         public async Task CloseAsync()
         {
@@ -77,7 +88,7 @@ namespace Puerts.UnitTest
         [Test]
         public async Task SmokeTest()
         {
-            WebSocketServer wss = new WebSocketServer("http://localhost:5000/");
+            WebSocketServer wss = new WebSocketServer("http://localhost:5123/");
 #if PUERTS_GENERAL
             var jsEnv = new JsEnv(new TxtLoader());
 #else
@@ -96,15 +107,27 @@ namespace Puerts.UnitTest
 
             jsEnv.Eval(@"
                 (function() {
-                    let con = new WebSocket('ws://localhost:5000');
+                    global.con = new WebSocket('ws://localhost:5123');
                     con.addEventListener('open', (ev) => {
                         console.log(`on open`);
                         con.send('puerts websocket');
+                        if (con.readyState != WebSocket.OPEN) {
+                            throw new Error('invalid readyState');
+                        }
                     });
                     con.addEventListener('message', (ev) => {
                         console.log(`on message: ${ev.data}`);
                         global.webSocketMessage = ev.data;
-                        con.close();
+                        if (ev.data instanceof ArrayBuffer) {
+                            global.webSocketMessage = Array.from(new Uint8Array(ev.data)).map(byte => byte.toString()).join(',');
+                        }
+                        //con.close();
+                    });
+                    con.addEventListener('close', (ev) => {
+                        global.onclose_called = true;
+                    });
+                    con.addEventListener('error', (ev) => {
+                        global.onerror_called = true;
                     });
                 })();
             ");
@@ -118,9 +141,34 @@ namespace Puerts.UnitTest
             await wss.SendAsync(msg);
 
             waitJsEnv();
-            wss.Stop();
+            
             var res = jsEnv.Eval<string>("global.webSocketMessage");
             Assert.AreEqual(res, "puerts websocket");
+
+            waitJsEnv();
+            
+            byte[] buffer = new byte[] {0,0,0,46,14,0,34,8,128,32,16,1,24,2,34,15,87,90,82,89,45,49,56,57,57,54,57,50,56,56,48,40,6,48,0,56,0,72,0,88,0,0,2,8,0,15};
+            await wss.SendAsync(buffer);
+            
+            waitJsEnv();
+            
+            res = jsEnv.Eval<string>("global.webSocketMessage"); 
+            
+            Assert.AreEqual("0,0,0,46,14,0,34,8,128,32,16,1,24,2,34,15,87,90,82,89,45,49,56,57,57,54,57,50,56,56,48,40,6,48,0,56,0,72,0,88,0,0,2,8,0,15", res);
+
+            jsEnv.Eval(@"
+                con._raw.send = () => {throw new Error()};
+                con.send('some message');
+            ");
+
+            waitJsEnv();
+
+            var flag = jsEnv.Eval<bool>("global.onclose_called");
+            Assert.AreEqual(flag, true);
+            flag = jsEnv.Eval<bool>("global.onerror_called");
+            Assert.AreEqual(flag, true);
+
+            wss.Stop();
         }
     }
 }

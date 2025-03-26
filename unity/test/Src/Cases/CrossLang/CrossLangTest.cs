@@ -4,6 +4,42 @@ using System.Runtime.InteropServices;
 
 namespace Puerts.UnitTest
 {
+    [UnityEngine.Scripting.Preserve]
+    public class TestGC
+    {
+        public static int ObjCount = 0;
+
+        [UnityEngine.Scripting.Preserve]
+        public TestGC()
+        {
+            ++ObjCount;
+        }
+
+        [UnityEngine.Scripting.Preserve]
+
+        ~TestGC()
+        {
+            --ObjCount;
+        }
+    }
+
+    [UnityEngine.Scripting.Preserve]
+    public class OverloadTestObject
+    {
+        public static int LastCall = 999;
+
+        [UnityEngine.Scripting.Preserve]
+        public void WithObjectParam(string str)
+        {
+            LastCall = 1;
+        }
+
+        [UnityEngine.Scripting.Preserve]
+        public void WithObjectParam(object str)
+        {
+            LastCall = 2;
+        }
+    }
 
     public class TestObject
     {
@@ -11,6 +47,22 @@ namespace Puerts.UnitTest
         public TestObject(int val)
         {
             value = val;
+        }
+        
+        static int tmp;
+        
+        public int WriteOnly
+        {
+            set {
+                tmp = value;
+            }
+        }
+        
+        public static int StaticWriteOnly
+        {
+            set {
+                tmp = value;
+            }
         }
     }
     public struct TestStruct
@@ -23,6 +75,34 @@ namespace Puerts.UnitTest
             value = val;
             value2 = 0;
             value3 = 0;
+        }
+    }
+    [UnityEngine.Scripting.Preserve]
+    public struct TestStruct2
+    {
+        public int v1;
+        public int v2;
+        public string v3;
+
+        [UnityEngine.Scripting.Preserve]
+        public TestStruct2(int p1, int p2, string p3)
+        {
+            v1 = p1;
+            v2 = p2;
+            v3 = p3;
+        }
+
+        [UnityEngine.Scripting.Preserve]
+        public override string ToString()
+        {
+            return v1 + ":" + v2 + ":" + v3;
+        }
+
+
+        [UnityEngine.Scripting.Preserve]
+        public string GetString()
+        {
+            return v1 + ":" + v2 + ":" + v3;
         }
     }
     [StructLayout(LayoutKind.Sequential)]
@@ -126,7 +206,7 @@ namespace Puerts.UnitTest
 
         public TestHelper()
         {
-#if UNITY_EDITOR || !EXPERIMENTAL_IL2CPP_PUERTS
+#if UNITY_EDITOR || PUERTS_DISABLE_IL2CPP_OPTIMIZATION || (!PUERTS_IL2CPP_OPTIMIZATION && (UNITY_WEBGL || UNITY_IPHONE))
             var env = UnitTestEnv.GetEnv();
             env.UsingFunc<int>();
             env.UsingFunc<int, int>();
@@ -584,6 +664,21 @@ namespace Puerts.UnitTest
             ");
             jsEnv.Tick();
         }
+        
+        [Test]
+        public void WriteOnlyTest()
+        {
+            var jsEnv = UnitTestEnv.GetEnv();
+            jsEnv.Eval(@"
+                (function() {
+                    let o = new CS.Puerts.UnitTest.TestObject(1);
+                    let v = o.WriteOnly;
+                    let sv = CS.Puerts.UnitTest.TestObject.StaticWriteOnly
+                })()
+            ");
+            jsEnv.Tick();
+        }
+        
         [Test]
         public void NoNewOnStaticFunction()
         {
@@ -811,6 +906,24 @@ namespace Puerts.UnitTest
             jsEnv.Tick();
         }
         [Test]
+        public void TestStructAccess()
+        {
+            var jsEnv = UnitTestEnv.GetEnv();
+            // preload
+            jsEnv.Eval(@"
+                 (function() {
+                     return CS.Puerts.UnitTest.TestStruct2
+                 })()
+            ");
+            var res = jsEnv.Eval<string>(@"
+                 (function() {
+                     const s1 = new CS.Puerts.UnitTest.TestStruct2(5345, 3214, 'fqpziq');
+                     return s1.ToString();
+                 })()
+            ");
+            Assert.AreEqual("5345:3214:fqpziq", res);
+        }
+        [Test]
         public void NullableNativeStructInstanceTest()
         {
             var jsEnv = UnitTestEnv.GetEnv();
@@ -945,6 +1058,104 @@ namespace Puerts.UnitTest
             ");
             Assert.AreEqual(FooVE.Instance().foo.width, ret);
             jsEnv.Tick();
+        }
+
+        [Test]
+        public void CallDelegateAfterJsEnvDisposed()
+        {
+#if PUERTS_GENERAL
+            var jsEnv = new JsEnv(new TxtLoader());
+#else
+            var jsEnv = new JsEnv(new DefaultLoader());
+#endif
+            var callback = jsEnv.Eval<Action>("() => console.log('hello')");
+            callback();
+            jsEnv.Dispose();
+            Assert.Catch(() =>
+            {
+                callback();
+            });
+        }
+
+        //看上去GC.Collect()对webgl无效，先去掉
+#if !UNITY_WEBGL || UNITY_EDITOR
+        [Test]
+        public void TestJsGC()
+        {
+#if PUERTS_GENERAL
+            var jsEnv = new JsEnv(new TxtLoader());
+#else
+            var jsEnv = new JsEnv(new DefaultLoader());
+#endif
+            var objCount = jsEnv.Eval<int>(@"
+            const randomCount = Math.floor(Math.random() * 50) + 1;
+
+            var objs = []
+            for (let i = 0; i < randomCount; i++) {
+                objs.push(new CS.Puerts.UnitTest.TestGC())
+            }
+            randomCount;
+            ");
+
+            if (jsEnv.Backend is BackendV8)
+            {
+                jsEnv.Eval("gc()");
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            Assert.AreEqual(objCount, TestGC.ObjCount);
+            Assert.True(objCount > 0);
+
+            jsEnv.Eval("objs = undefined");
+
+            if (jsEnv.Backend is BackendV8)
+            {
+                jsEnv.Eval("gc()");
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            Assert.AreEqual(0, TestGC.ObjCount);
+
+            jsEnv.Dispose();
+        }
+#endif
+
+        [Test]
+        public void OverloadTest()
+        {
+            //
+#if PUERTS_GENERAL
+            var jsEnv = new JsEnv(new TxtLoader());
+#else
+            var jsEnv = new JsEnv(new DefaultLoader());
+#endif
+            jsEnv.Eval(@"
+            (function() {
+            const o = new CS.Puerts.UnitTest.OverloadTestObject();
+            o.WithObjectParam('tt');
+            console.log('call with string ');
+            }) ();
+            ");
+
+            Assert.AreEqual(1, OverloadTestObject.LastCall);
+
+            jsEnv.Eval(@"
+            (function() {
+            const o = new CS.Puerts.UnitTest.OverloadTestObject();
+            o.WithObjectParam(888);
+             console.log('call with int ');
+            }) ();
+            ");
+
+            Assert.AreEqual(2, OverloadTestObject.LastCall);
+
+            jsEnv.Dispose();
         }
     }
 }

@@ -77,6 +77,8 @@ void FStructWrapper::RefreshMethod(UFunction* InFunction)
     }
 }
 
+MSVC_PRAGMA(warning(push))
+MSVC_PRAGMA(warning(disable : 4191))
 void FStructWrapper::InitTemplateProperties(
     v8::Isolate* Isolate, UStruct* InStruct, v8::Local<v8::FunctionTemplate> Template, bool IsReuseTemplate)
 {
@@ -93,14 +95,21 @@ void FStructWrapper::InitTemplateProperties(
                 v8::PropertyAttribute PropertyAttribute = v8::DontDelete;
                 if (!PropertyInfo->Setter)
                     PropertyAttribute = (v8::PropertyAttribute)(PropertyAttribute | v8::ReadOnly);
-                auto Data = PropertyInfo->Data ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, PropertyInfo->Data))
-                                               : v8::Local<v8::Value>();
+                auto GetterData = PropertyInfo->GetterData
+                                      ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, PropertyInfo->GetterData))
+                                      : v8::Local<v8::Value>();
+
+                auto SetterData = PropertyInfo->SetterData
+                                      ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, PropertyInfo->SetterData))
+                                      : v8::Local<v8::Value>();
 
                 Template->PrototypeTemplate()->SetAccessorProperty(FV8Utils::InternalString(Isolate, PropertyInfo->Name),
-                    PropertyInfo->Getter ? v8::FunctionTemplate::New(Isolate, PropertyInfo->Getter, Data)
-                                         : v8::Local<v8::FunctionTemplate>(),
-                    PropertyInfo->Setter ? v8::FunctionTemplate::New(Isolate, PropertyInfo->Setter, Data)
-                                         : v8::Local<v8::FunctionTemplate>(),
+                    PropertyInfo->Getter
+                        ? v8::FunctionTemplate::New(Isolate, (v8::FunctionCallback) PropertyInfo->Getter, GetterData)
+                        : v8::Local<v8::FunctionTemplate>(),
+                    PropertyInfo->Setter
+                        ? v8::FunctionTemplate::New(Isolate, (v8::FunctionCallback) PropertyInfo->Setter, SetterData)
+                        : v8::Local<v8::FunctionTemplate>(),
                     PropertyAttribute);
             }
             ++PropertyInfo;
@@ -114,14 +123,21 @@ void FStructWrapper::InitTemplateProperties(
                 v8::PropertyAttribute PropertyAttribute = v8::DontDelete;
                 if (!PropertyInfo->Setter)
                     PropertyAttribute = (v8::PropertyAttribute)(PropertyAttribute | v8::ReadOnly);
-                auto Data = PropertyInfo->Data ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, PropertyInfo->Data))
-                                               : v8::Local<v8::Value>();
+                auto GetterData = PropertyInfo->GetterData
+                                      ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, PropertyInfo->GetterData))
+                                      : v8::Local<v8::Value>();
+
+                auto SetterData = PropertyInfo->SetterData
+                                      ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, PropertyInfo->SetterData))
+                                      : v8::Local<v8::Value>();
 
                 Template->SetAccessorProperty(FV8Utils::InternalString(Isolate, PropertyInfo->Name),
-                    PropertyInfo->Getter ? v8::FunctionTemplate::New(Isolate, PropertyInfo->Getter, Data)
-                                         : v8::Local<v8::FunctionTemplate>(),
-                    PropertyInfo->Setter ? v8::FunctionTemplate::New(Isolate, PropertyInfo->Setter, Data)
-                                         : v8::Local<v8::FunctionTemplate>(),
+                    PropertyInfo->Getter
+                        ? v8::FunctionTemplate::New(Isolate, (v8::FunctionCallback) PropertyInfo->Getter, GetterData)
+                        : v8::Local<v8::FunctionTemplate>(),
+                    PropertyInfo->Setter
+                        ? v8::FunctionTemplate::New(Isolate, (v8::FunctionCallback) PropertyInfo->Setter, SetterData)
+                        : v8::Local<v8::FunctionTemplate>(),
                     PropertyAttribute);
                 ++PropertyInfo;
             }
@@ -173,7 +189,7 @@ v8::Local<v8::FunctionTemplate> FStructWrapper::ToFunctionTemplate(v8::Isolate* 
 
     if (ClassDefinition)
     {
-        ExternalInitialize = ClassDefinition->Initialize;
+        ExternalInitialize = (V8InitializeFuncType) ClassDefinition->Initialize;
         ExternalFinalize = ClassDefinition->Finalize;
         JSFunctionInfo* FunctionInfo = ClassDefinition->Methods;
         while (FunctionInfo && FunctionInfo->Name && FunctionInfo->Callback)
@@ -186,7 +202,7 @@ v8::Local<v8::FunctionTemplate> FStructWrapper::ToFunctionTemplate(v8::Isolate* 
                 if (FastCallInfo)
                 {
                     Result->PrototypeTemplate()->Set(FV8Utils::InternalString(Isolate, FunctionInfo->Name),
-                        v8::FunctionTemplate::New(Isolate, FunctionInfo->Callback,
+                        v8::FunctionTemplate::New(Isolate, (v8::FunctionCallback) FunctionInfo->Callback,
                             FunctionInfo->Data ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, FunctionInfo->Data))
                                                : v8::Local<v8::Value>(),
                             v8::Local<v8::Signature>(), 0, v8::ConstructorBehavior::kThrow, v8::SideEffectType::kHasSideEffect,
@@ -196,7 +212,7 @@ v8::Local<v8::FunctionTemplate> FStructWrapper::ToFunctionTemplate(v8::Isolate* 
 #endif
                 {
                     Result->PrototypeTemplate()->Set(FV8Utils::InternalString(Isolate, FunctionInfo->Name),
-                        v8::FunctionTemplate::New(Isolate, FunctionInfo->Callback,
+                        v8::FunctionTemplate::New(Isolate, (v8::FunctionCallback) FunctionInfo->Callback,
                             FunctionInfo->Data ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, FunctionInfo->Data))
                                                : v8::Local<v8::Value>()));
                 }
@@ -214,7 +230,7 @@ v8::Local<v8::FunctionTemplate> FStructWrapper::ToFunctionTemplate(v8::Isolate* 
                 if (FastCallInfo)
                 {
                     Result->Set(FV8Utils::InternalString(Isolate, FunctionInfo->Name),
-                        v8::FunctionTemplate::New(Isolate, FunctionInfo->Callback,
+                        v8::FunctionTemplate::New(Isolate, (v8::FunctionCallback) FunctionInfo->Callback,
                             FunctionInfo->Data ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, FunctionInfo->Data))
                                                : v8::Local<v8::Value>(),
                             v8::Local<v8::Signature>(), 0, v8::ConstructorBehavior::kThrow, v8::SideEffectType::kHasSideEffect,
@@ -224,7 +240,7 @@ v8::Local<v8::FunctionTemplate> FStructWrapper::ToFunctionTemplate(v8::Isolate* 
 #endif
                 {
                     Result->Set(FV8Utils::InternalString(Isolate, FunctionInfo->Name),
-                        v8::FunctionTemplate::New(Isolate, FunctionInfo->Callback,
+                        v8::FunctionTemplate::New(Isolate, (v8::FunctionCallback) FunctionInfo->Callback,
                             FunctionInfo->Data ? static_cast<v8::Local<v8::Value>>(v8::External::New(Isolate, FunctionInfo->Data))
                                                : v8::Local<v8::Value>()));
                 }
@@ -442,6 +458,7 @@ v8::Local<v8::FunctionTemplate> FStructWrapper::ToFunctionTemplate(v8::Isolate* 
 
     return Result;
 }
+MSVC_PRAGMA(warning(pop))
 
 void FStructWrapper::StaticClass(const v8::FunctionCallbackInfo<v8::Value>& Info)
 {
@@ -618,11 +635,11 @@ void* FScriptStructWrapper::Alloc(UScriptStruct* InScriptStruct)
     return ScriptStructMemory;
 }
 
-void FScriptStructWrapper::Free(TWeakObjectPtr<UStruct> InStruct, FinalizeFunc InExternalFinalize, void* Ptr)
+void FScriptStructWrapper::Free(TWeakObjectPtr<UStruct> InStruct, pesapi_finalize InExternalFinalize, void* Ptr)
 {
     if (InExternalFinalize)
     {
-        InExternalFinalize(Ptr);
+        InExternalFinalize(Ptr, nullptr, nullptr);
     }
     else
     {

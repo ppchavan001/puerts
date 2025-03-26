@@ -14,13 +14,14 @@ on:
   push:
     paths: 
       - unity/native_src/**
-      - unity/native_src_il2cpp/**
       - unity/cli/**
       - unreal/Puerts/Source/JsEnv/Private/V8InspectorImpl.cpp
+      - unreal/Puerts/Source/JsEnv/Private/WebSocketImpl.cpp
       - unreal/Puerts/Source/JsEnv/Private/V8InspectorImpl.h
       - unreal/Puerts/Source/JsEnv/Private/PromiseRejectCallback.hpp
       - unreal/Puerts/ThirdParty/**
       - .github/workflows/unity_build_plugins.yml
+      - .github/workflows/composites/unity-build-plugins/**
 
 env:
   RUNID: 613573412
@@ -43,7 +44,7 @@ jobs:
         uses: ./.github/workflows/composites/unity-build-plugins/android/
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          backend: v8_9.4
+          backend: v8_9.4.146.24
       - name: BuildAndroid_V8_10_6
         uses: ./.github/workflows/composites/unity-build-plugins/android/
         with:
@@ -83,7 +84,7 @@ jobs:
         uses: ./.github/workflows/composites/unity-build-plugins/ohos/
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          backend: v8_9.4
+          backend: v8_9.4.146.24
       - name: BuildOHOS_V8_10_6
         uses: ./.github/workflows/composites/unity-build-plugins/ohos/
         with:
@@ -102,7 +103,7 @@ jobs:
           backend: mult
 
   ios:
-    runs-on: macos-12
+    runs-on: macos-13
 
     steps:
       - uses: actions/checkout@v3
@@ -110,7 +111,7 @@ jobs:
         uses: ./.github/workflows/composites/unity-build-plugins/ios/
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          backend: v8_9.4
+          backend: v8_9.4.146.24
       - name: BuildiOS_V8_10_6
         uses: ./.github/workflows/composites/unity-build-plugins/ios/
         with:
@@ -134,7 +135,7 @@ jobs:
           backend: mult
 
   osx:
-    runs-on: macos-12
+    runs-on: macos-13
 
     steps:
       - uses: actions/checkout@v3
@@ -142,7 +143,7 @@ jobs:
         uses: ./.github/workflows/composites/unity-build-plugins/osx/
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          backend: v8_9.4
+          backend: v8_9.4.146.24
       - name: BuildOSX_V8_10_6
         uses: ./.github/workflows/composites/unity-build-plugins/osx/
         with:
@@ -174,7 +175,7 @@ jobs:
         uses: ./.github/workflows/composites/unity-build-plugins/windows/
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          backend: v8_9.4
+          backend: v8_9.4.146.24
       - name: BuildWindows_V8_10_6
         uses: ./.github/workflows/composites/unity-build-plugins/windows/
         with:
@@ -206,7 +207,7 @@ jobs:
         uses: ./.github/workflows/composites/unity-build-plugins/linux/
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          backend: v8_9.4
+          backend: v8_9.4.146.24
       - name: BuildLinux_V8_10_6
         uses: ./.github/workflows/composites/unity-build-plugins/linux/
         with:

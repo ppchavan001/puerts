@@ -133,6 +133,17 @@ namespace PUERTS_NAMESPACE
             Isolate, Context, 
             v8::FunctionTemplate::New(Isolate, &JSObjectValueGetterFunction)->GetFunction(Context).ToLocalChecked()
         );
+        
+#ifdef WITH_IL2CPP_OPTIMIZATION
+#ifdef WITH_QUICKJS
+        auto ctx = Context->context_;
+        CppObjectMapperQjs.Initialize(ctx);
+#endif
+#ifdef WITH_V8
+        CppObjectMapperV8.Initialize(Isolate, Context);
+        Isolate->SetData(MAPPER_ISOLATE_DATA_POS, static_cast<ICppObjectMapper*>(&CppObjectMapperV8));
+#endif
+#endif
 
         BackendEnv.StartPolling();
     }
@@ -202,11 +213,30 @@ namespace PUERTS_NAMESPACE
         ResultInfo.Context.Reset();
         ResultInfo.Result.Reset();
 
+#ifdef WITH_IL2CPP_OPTIMIZATION
+#ifdef WITH_QUICKJS
+        CppObjectMapperQjs.Cleanup();
+#endif
+#ifdef WITH_V8
+        CppObjectMapperV8.UnInitialize(MainIsolate);
+#endif
+#endif
+
+        for (int i = 0; i < CallbackWithFinalizeInfos.size(); ++i)
+        {
+            CallbackWithFinalizeInfos[i]->JsFunction.Reset();
+        }
+        
         BackendEnv.UnInitialize();
 
         for (int i = 0; i < CallbackInfos.size(); ++i)
         {
             delete CallbackInfos[i];
+        }
+        
+        for (int i = 0; i < CallbackWithFinalizeInfos.size(); ++i)
+        {
+            delete CallbackWithFinalizeInfos[i];
         }
 
         for (int i = 0; i < LifeCycleInfos.size(); ++i)
@@ -222,6 +252,9 @@ namespace PUERTS_NAMESPACE
             bool success = Eval(ExecuteModuleJSCode, "__puer_execute__.mjs");
             if (!success) return nullptr;
             
+#ifdef THREAD_SAFE
+            v8::Locker Locker(MainIsolate);
+#endif
             v8::Isolate::Scope IsolateScope(MainIsolate);
             v8::HandleScope HandleScope(MainIsolate);
             v8::Local<v8::Context> Context = ResultInfo.Context.Get(MainIsolate);
@@ -426,6 +459,60 @@ namespace PUERTS_NAMESPACE
         return v8::FunctionTemplate::New(Isolate, CSharpFunctionCallbackWrap, v8::External::New(Isolate, CallbackInfos[Pos]),  v8::Local<v8::Signature>(), 0,  v8::ConstructorBehavior::kThrow);
 #endif
     }
+    
+    void JSEngine::CallbackDataGarbageCollected(const v8::WeakCallbackInfo<FCallbackInfoWithFinalize>& Data)
+    {
+        FCallbackInfoWithFinalize* CallbackData = Data.GetParameter();
+        auto Isolate = Data.GetIsolate();
+        if (CallbackData->Finalize)
+        {
+#ifdef MULT_BACKENDS
+            auto JsEngine = FV8Utils::IsolateData<JSEngine>(Isolate);
+            CallbackData->Finalize(JsEngine->ResultInfo.PuertsPlugin, CallbackData->Data);
+#else
+            CallbackData->Finalize(Isolate, CallbackData->Data);
+#endif
+        }
+        for (auto it = CallbackData->JSE->CallbackWithFinalizeInfos.begin(); it != CallbackData->JSE->CallbackWithFinalizeInfos.end(); )
+        {
+            if (*it == CallbackData)
+            {
+                it = CallbackData->JSE->CallbackWithFinalizeInfos.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+        delete CallbackData;
+    }
+    
+    v8::MaybeLocal<v8::Function> JSEngine::CreateFunction(CSharpFunctionCallback Callback, JsFunctionFinalizeCallback Finalize, int64_t Data)
+    {
+        v8::Isolate* Isolate = BackendEnv.MainIsolate;
+        v8::Local<v8::Context> Context = Isolate->GetCurrentContext();
+        auto CallbackData = new FCallbackInfoWithFinalize(false, Callback, Data, Finalize, this);
+
+#if defined(WITH_QUICKJS)
+        auto Template = v8::FunctionTemplate::New(Isolate, CSharpFunctionCallbackWrap, v8::External::New(Isolate, CallbackData));
+#else
+        auto Template = v8::FunctionTemplate::New(Isolate, CSharpFunctionCallbackWrap, v8::External::New(Isolate, CallbackData),  v8::Local<v8::Signature>(), 0,  v8::ConstructorBehavior::kThrow);
+        Template->Set(Isolate, "__do_not_cache", v8::ObjectTemplate::New(Isolate));
+#endif
+        auto Ret = Template->GetFunction(Context);
+        if (!Ret.IsEmpty())
+        {
+            CallbackData->JsFunction.Reset(Isolate, Ret.ToLocalChecked());
+            CallbackData->JsFunction.SetWeak<FCallbackInfoWithFinalize>(
+                CallbackData, CallbackDataGarbageCollected, v8::WeakCallbackType::kInternalFields);
+            CallbackWithFinalizeInfos.push_back(CallbackData);
+        }
+        else
+        {
+            delete CallbackData;
+        }
+        return Ret;
+    }
 
     void JSEngine::SetGlobalFunction(const char *Name, CSharpFunctionCallback Callback, int64_t Data)
     {
@@ -538,7 +625,7 @@ namespace PUERTS_NAMESPACE
         v8::Local<v8::Context> Context = ResultInfo.Context.Get(Isolate);
         v8::Context::Scope ContextScope(Context);
 
-        if (ClassID >= Templates.size()) return false;
+        if (ClassID >= Templates.size() || !Callback) return false;
 
         if (IsStatic)
         {
@@ -587,14 +674,15 @@ namespace PUERTS_NAMESPACE
 
         if (IsStatic)
         {
-            Templates[ClassID].Get(Isolate)->SetAccessorProperty(FV8Utils::V8String(Isolate, Name), ToTemplate(Isolate, IsStatic, Getter, GetterData)
-                , Setter == nullptr ? v8::Local<v8::FunctionTemplate>() : ToTemplate(Isolate, IsStatic, Setter, SetterData), Attr);
+            Templates[ClassID].Get(Isolate)->SetAccessorProperty(FV8Utils::V8String(Isolate, Name), 
+                Getter == nullptr ? v8::Local<v8::FunctionTemplate>() : ToTemplate(Isolate, IsStatic, Getter, GetterData), 
+                Setter == nullptr ? v8::Local<v8::FunctionTemplate>() : ToTemplate(Isolate, IsStatic, Setter, SetterData), Attr);
         }
         else
         {
             Templates[ClassID].Get(Isolate)->PrototypeTemplate()->SetAccessorProperty(FV8Utils::V8String(Isolate, Name),
-                ToTemplate(Isolate, IsStatic, Getter, GetterData)
-                , Setter == nullptr ? v8::Local<v8::FunctionTemplate>() : ToTemplate(Isolate, IsStatic, Setter, SetterData), Attr);
+                Getter == nullptr ? v8::Local<v8::FunctionTemplate>() : ToTemplate(Isolate, IsStatic, Getter, GetterData),
+                Setter == nullptr ? v8::Local<v8::FunctionTemplate>() : ToTemplate(Isolate, IsStatic, Setter, SetterData), Attr);
         }
 
         return true;
@@ -724,6 +812,9 @@ namespace PUERTS_NAMESPACE
     
     bool JSEngine::ClearModuleCache(const char* Path)
     {
+#ifdef THREAD_SAFE
+        v8::Locker Locker(MainIsolate);
+#endif
         v8::Isolate::Scope IsolateScope(MainIsolate);
         v8::HandleScope HandleScope(MainIsolate);
         v8::Local<v8::Context> Context = ResultInfo.Context.Get(MainIsolate);

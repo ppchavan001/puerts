@@ -129,7 +129,7 @@ public:
 
     virtual void ReloadModule(FName ModuleName, const FString& JsSource) override;
 
-    virtual void ReloadSource(const FString& Path, const std::string& JsSource) override;
+    virtual void ReloadSource(const FString& Path, const PString& JsSource) override;
 
     std::function<void(const FString&)> OnSourceLoadedCallback;
 
@@ -157,13 +157,19 @@ public:
 
     virtual void UnBindStruct(FScriptStructWrapper* ScriptStructWrapper, void* Ptr) override;
 
-    virtual void UnBindCppObject(JSClassDefinition* ClassDefinition, void* Ptr) override;
+    virtual void UnBindCppObject(v8::Isolate* Isolate, JSClassDefinition* ClassDefinition, void* Ptr) override;
 
     virtual v8::Local<v8::Value> FindOrAddStruct(
         v8::Isolate* Isolate, v8::Local<v8::Context>& Context, UScriptStruct* ScriptStruct, void* Ptr, bool PassByPointer) override;
 
     virtual void BindCppObject(v8::Isolate* InIsolate, JSClassDefinition* ClassDefinition, void* Ptr,
         v8::Local<v8::Object> JSObject, bool PassByPointer) override;
+
+    virtual void* GetPrivateData(v8::Local<v8::Context> Context, v8::Local<v8::Object> JSObject) override;
+
+    virtual void SetPrivateData(v8::Local<v8::Context> Context, v8::Local<v8::Object> JSObject, void* Ptr) override;
+
+    virtual v8::MaybeLocal<v8::Function> LoadTypeById(v8::Local<v8::Context> Context, const void* TypeId) override;
 
     virtual v8::Local<v8::Value> FindOrAddCppObject(
         v8::Isolate* Isolate, v8::Local<v8::Context>& Context, const void* TypeId, void* Ptr, bool PassByPointer) override;
@@ -366,7 +372,7 @@ private:
 
     struct ObjectMerger
     {
-        std::map<std::string, std::unique_ptr<FPropertyTranslator>> Fields;
+        std::map<PString, std::unique_ptr<FPropertyTranslator>> Fields;
         UStruct* Struct;
         FJsEnvImpl* Parent;
 

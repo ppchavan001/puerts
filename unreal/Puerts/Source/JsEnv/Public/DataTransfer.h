@@ -28,6 +28,10 @@ PRAGMA_ENABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #define MAPPER_ISOLATE_DATA_POS 0
 #endif
 
+#ifndef PESAPI_PRIVATE_DATA_POS_IN_ISOLATE
+#define PESAPI_PRIVATE_DATA_POS_IN_ISOLATE (MAPPER_ISOLATE_DATA_POS + 1)
+#endif
+
 #define RELEASED_UOBJECT ((UObject*) 12)
 #define RELEASED_UOBJECT_MEMBER ((void*) 12)
 
@@ -177,6 +181,24 @@ struct TScriptStructTraits<FPlane>
     }
 };
 
+template <>
+struct TScriptStructTraits<FMatrix>
+{
+    static UScriptStruct* Get()
+    {
+        return GetScriptStructInCoreUObject(TEXT("Matrix"));
+    }
+};
+
+template <>
+struct TScriptStructTraits<FIntVector4>
+{
+    static UScriptStruct* Get()
+    {
+        return GetScriptStructInCoreUObject(TEXT("IntVector4"));
+    }
+};
+
 template <class...>
 using ToVoid = void;
 
@@ -268,10 +290,20 @@ public:
         return static_cast<T*>(Isolate->GetData(MAPPER_ISOLATE_DATA_POS));
     }
 
+    FORCEINLINE static void* GetIsolatePrivateData(v8::Isolate* Isolate)
+    {
+        return Isolate->GetData(PESAPI_PRIVATE_DATA_POS_IN_ISOLATE);
+    }
+
+    FORCEINLINE static void SetIsolatePrivateData(v8::Isolate* Isolate, void* PrivateData)
+    {
+        Isolate->SetData(PESAPI_PRIVATE_DATA_POS_IN_ISOLATE, PrivateData);
+    }
+
     static v8::Local<v8::Value> FindOrAddCData(
         v8::Isolate* Isolate, v8::Local<v8::Context> Context, const void* TypeId, const void* Ptr, bool PassByPointer);
 
-    static bool IsInstanceOf(v8::Isolate* Isolate, const void* TypeId, v8::Local<v8::Object> JsObject);
+    static bool IsInstanceOf(v8::Isolate* Isolate, const void* TypeId, v8::Local<v8::Value> JsObject);
 
     static v8::Local<v8::Value> UnRef(v8::Isolate* Isolate, const v8::Local<v8::Value>& Value);
 
@@ -299,12 +331,12 @@ public:
         v8::Isolate* Isolate, v8::Local<v8::Context> Context, UScriptStruct* ScriptStruct, void* Ptr, bool PassByPointer);
 
     template <typename T>
-    static bool IsInstanceOf(v8::Isolate* Isolate, v8::Local<v8::Object> JsObject)
+    static bool IsInstanceOf(v8::Isolate* Isolate, v8::Local<v8::Value> JsObject)
     {
         return IsInstanceOf(Isolate, TScriptStructTraits<T>::Get(), JsObject);
     }
 
-    static bool IsInstanceOf(v8::Isolate* Isolate, UStruct* Struct, v8::Local<v8::Object> JsObject);
+    static bool IsInstanceOf(v8::Isolate* Isolate, UStruct* Struct, v8::Local<v8::Value> JsObject);
 
     static FString ToFString(v8::Isolate* Isolate, v8::Local<v8::Value> Value);
 

@@ -141,11 +141,7 @@ namespace Puerts.UnitTest
                         return func('hello');
                     })();
                 ");
-#if EXPERIMENTAL_IL2CPP_PUERTS && !UNITY_EDITOR
-            }, "'System.String' cannot be converted to type 'System.Int32'");
-#else 
             }, "invalid arguments to StaticGenericMethod");
-#endif
             jsEnv.Tick();
         }
 
@@ -201,5 +197,36 @@ namespace Puerts.UnitTest
             
             jsEnv.Tick();
         }
+
+        // web环境没有gc这个api
+#if !UNITY_WEBGL || UNITY_EDITOR
+        [Test]
+        public void CreateFunctionByMethodInfoTest()
+        {
+            var jsEnv = UnitTestEnv.GetEnv();
+
+            string ret = jsEnv.Eval<string>(@"
+                (function() {
+                    const cls = puer.$typeof(CS.Puerts.UnitTest.GenericTestClass);
+                    const methods = CS.Puerts.Utils.GetMethodAndOverrideMethodByName(cls, 'StaticGenericMethod');
+                    let overloads = [];
+                    for (let i = 0; i < methods.Length; i++) {
+                        let method = methods.GetValue(i)
+                        overloads.push(method.MakeGenericMethod(puer.$typeof(CS.System.Int32)));
+                    }
+                    const func = puer.createFunction(...overloads);
+                    return func() + func(1024);
+                })();
+            ");
+            Assert.AreEqual(ret, "Int321024");
+
+            if (jsEnv.Backend is BackendV8)
+            {
+                jsEnv.Eval("gc()");
+            }
+
+            jsEnv.Tick();
+        }
+#endif
     }
 }

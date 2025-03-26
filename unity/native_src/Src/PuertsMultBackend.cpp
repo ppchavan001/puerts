@@ -8,6 +8,9 @@
 #include <cstring>
 #include "IPuertsPlugin.h"
 #include "Log.h"
+#ifdef WITH_IL2CPP_OPTIMIZATION
+#include "pesapi.h"
+#endif
 
 #ifdef _WIN32
 
@@ -39,6 +42,10 @@ LogCallback GLogCallback = nullptr;
 LogCallback GLogWarningCallback = nullptr;
 LogCallback GLogErrorCallback = nullptr;
 
+#ifdef WITH_IL2CPP_OPTIMIZATION
+extern pesapi_func_ptr reg_apis[];
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -55,20 +62,20 @@ PUERTS_EXPORT int GetApiLevel()
 
 PUERTS_EXPORT int GetLibBackend(puerts::IPuertsPlugin* plugin)
 {
-    return 0;
+    return plugin->GetType();
 }
 
 PUERTS_EXPORT puerts::IPuertsPlugin* CreateJSEngine(int backend)
 {
-#ifdef V8_BACKEND
-    if (0 == backend)
+#ifdef MULT_BACKEND_V8
+    if (backend == 0/*puerts::JSEngineBackend::V8*/ || backend == 3/*puerts::JSEngineBackend::Auto*/)
     {
         return puerts::CreateV8Plugin(nullptr, nullptr);
     }
 #endif
 
-#ifdef QJS_BACKEND
-    if (2 == backend)
+#ifdef MULT_BACKEND_QJS
+    if (backend == 2/*puerts::JSEngineBackend::QuickJS*/ || backend == 3/*puerts::JSEngineBackend::Auto*/)
     {
         return puerts::CreateQJSPlugin(nullptr, nullptr);
     }
@@ -91,6 +98,13 @@ PUERTS_EXPORT void DestroyJSEngine(puerts::IPuertsPlugin* plugin)
 {
     delete plugin;
 }
+
+#ifdef WITH_IL2CPP_OPTIMIZATION
+PUERTS_EXPORT pesapi_func_ptr* GetRegsterApi()
+{
+    return reg_apis;
+}
+#endif
 
 PUERTS_EXPORT void SetGlobalFunction(puerts::IPuertsPlugin* plugin, const char *Name, puerts::FuncPtr Callback, int64_t Data)
 {
@@ -354,6 +368,11 @@ PUERTS_EXPORT void ReturnFunction(puerts::IPuertsPlugin* plugin, const void* Inf
 PUERTS_EXPORT void ReturnCSharpFunctionCallback(puerts::IPuertsPlugin* plugin, const void* Info, puerts::FuncPtr Callback, int64_t Data)
 {
     plugin->ReturnCSharpFunctionCallback(Info, Callback, Data);
+}
+
+PUERTS_EXPORT void ReturnCSharpFunctionCallback2(puerts::IPuertsPlugin* plugin, const void* Info, puerts::FuncPtr Callback, puerts::FuncPtr Finalize, int64_t Data)
+{
+    plugin->ReturnCSharpFunctionCallback(Info, Callback, Finalize, Data);
 }
 
 PUERTS_EXPORT void ReturnJSObject(puerts::IPuertsPlugin* plugin, const void* Info, void* Object)

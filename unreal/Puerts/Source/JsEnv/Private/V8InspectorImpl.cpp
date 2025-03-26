@@ -6,6 +6,8 @@
  * which is part of this source code package.
  */
 
+// TODO: 静态库11.8 window调试崩溃
+
 #if defined(UE_GAME) || defined(UE_EDITOR) || defined(UE_SERVER) || defined(USING_IN_UNREAL_ENGINE)
 #define USING_UE 1
 #else
@@ -189,6 +191,11 @@ public:
     bool Tick() override;
 
     V8InspectorChannel* CreateV8InspectorChannel() override;
+
+    v8::Local<v8::Context> ensureDefaultContextInGroup(int group_id) override
+    {
+        return Context.Get(Isolate);
+    }
 
 private:
     void OnHTTP(wspp_connection_hdl Handle);
@@ -421,8 +428,7 @@ bool V8InspectorClientImpl::Tick(float /* DeltaTime */)
                 v8::Context::Scope ContextScope(LocalContext);
                 v8::TryCatch TryCatch(Isolate);
 
-                // needs 'ReturnVal' assignment since Call is marked as V8_WARN_UNUSED_RESULT
-                auto ReturnVal = MicroTasksRunner.Get(Isolate)->Call(LocalContext, LocalContext->Global(), 0, nullptr);
+                (void) (MicroTasksRunner.Get(Isolate)->Call(LocalContext, LocalContext->Global(), 0, nullptr));
             }
         }
     }
@@ -554,8 +560,12 @@ void V8InspectorClientImpl::OnClose(wspp_connection_hdl Handle)
 
 void V8InspectorClientImpl::OnFail(wspp_connection_hdl Handle)
 {
+    wspp_server::connection_ptr con = Server.get_con_from_hdl(Handle);
+    std::string message = con->get_ec().message();
 #if USING_UE
-    UE_LOG(LogV8Inspector, Error, TEXT("Connection OnFail"));
+    UE_LOG(LogV8Inspector, Error, TEXT("Connection OnFail %s"), UTF8_TO_TCHAR(message.c_str()));
+#else
+    puerts::PLog(puerts::Error, "Connection OnFail %s", message.c_str());
 #endif
 }
 

@@ -1,36 +1,34 @@
-# 为Unity il2cpp特殊优化的模式 - xIl2cpp模式
+# il2cpp优化特性
 > 可用版本：>2.0.0
 
-xIl2cpp模式是Puer2.0版本新加的模式。顾名思义，优化仅针对Unity Il2cpp backend。xIl2cpp这个名字一方面是致敬PuerTS的前身xLua，也代表它是基于Il2cpp进行加强优化的技术。
+简单地说，il2cpp优化的思路是绕过 PInvoke直接通过il2cpp的接口访问C#，减少跨语言的消耗。最终使得性能表现大幅提升，详见[il2cpp优化特性性能数据](./index.md)
 
-简单粗浅地说，xIl2cpp模式是让il2cpp直接与v8交互，不再经由C# PInvoke调用native plugin。减少跨语言的消耗。最终使得性能表现大幅提升，详见[xil2cpp模式性能数据](./index.md)
+## 开启
 
-xIl2cpp模式在使用方式上会有较大的变化，比如需要自己编译Plugin与wrapper生成的步骤不同，API和使用机制上无需做任何改动。
-
-## 安装
-如果决定采用xIl2cpp模式，目前只建议使用[安装指南](../install)中提到的`GitHub Clone 并用 Unity UPM 安装`。且仓库地址需要改为`https://github.com/Tencent/puerts.git`，添加的路径为`[puerts]/unity/Assets/core/upm/package.json`
-
-之所以需要你把源码clone下来，是因为你需要自行编译Puer的二进制Plugin，才能使用到xIl2cpp的能力。
-
-随后，你需要先了解一下[编译指南](../other/building)的内容，xIl2cpp版本的编译稍有不同但大致类似（比如不再需要自行下载backend）。
+* 2.1.1及以下版本默认全平台关闭，要开启该特性需要进入Unity的`Player Settings`，添加Scripting Define Symbols: `PUERTS_IL2CPP_OPTIMIZATION`。
+* 2.2.0及以上版本在window、mac、linux、android默认开启，如果需要关闭该特性，需要进入Unity的`Player Settings`，添加Scripting Define Symbols: `PUERTS_DISABLE_IL2CPP_OPTIMIZATION`，在ios和webgl下默认关闭，添加Scripting Define Symbols: `PUERTS_IL2CPP_OPTIMIZATION`。
 
 ## 使用步骤
-1. 按照上述步骤安装好PuerTS的upm包。
-2. 编译mono版本plugin：cd到`puer目录/unity/native_src/`，输入符合你平台的编译命令，比如`node ../cli make --backend v8_9.4 --platform win --arch x64 --config Debug`。（编译命令本身其实也会识别你的平台，所以你也可以只输入`node ../cli make --backend v8_9.4 --config Debug`）
-3. 进入Unity的`Player Settings`，添加两个Scripting Define Symbols: `PUERTS_CPP_OUTPUT_TO_NATIVE_SRC_UPM;EXPERIMENTAL_IL2CPP_PUERTS`。顺便可将script backend切换为`il2cpp`。等待脚本编译。
-4. 生成编译所需的代码：点击Unity的`Tools/PuerTS/Generate for xIl2cpp mode(All in One)`。然后切出去cd到`puer目录/unity/native_src_il2cpp`，输入和步骤2相同的编译命令。
 
-### 使用步骤里的一些详细解释
-* 由于我们尽量让v8和il2cpp直接交互，所以il2cpp版本里，Wrapper就是C++的形式而非C#的形式。`Generate for xIl2cpp mode`里生成的FunctionBridge.h承担的就是原有的Static Wrapper角色。
-* FunctionBridge.h目前是需要编译进nativePlugins的，所以xIl2cpp模式需要你经常自行编译native plugin。
-* 不同函数签名的函数会在FunctionBridge.h里生成一个对应的wrapper函数。当然我们也支持反射的方式调用，性能略有损耗。
-* `Generate for xIl2cpp mode`中，会全量遍历所有Assembly，生成所有函数的wrapper。另外也提供了`generate/FunctionBridge.h(Configure)`，只会为生成列表中配置的类生成wrapper，其余使用反射机制调用。
-* `Generate/FunctionBridge.h`同时还会生成C#到JS调用的bridge，因此不再需要UsingFunc和UsingAction
-* 安装步骤中`PUERTS_CPP_OUTPUT_TO_NATIVE_SRC_UPM`就是为了让FunctionBridge.h直接生成到native_src_il2cpp目录，Puerts_il2cpp.cpp生成到Plugins目录。如果你不是使用upm方式安装puerts，则可以不添加该def，自行将这些文件复制到正确位置。
+* 如果你期待更高的性能，生成全量胶水代码：点击Unity的`Tools/PuerTS/Generate For xIl2cpp mode (all in one with full wrapper)`。
 
+* 如果你期待更小的代码量，仅生成基于反射的胶水代码：点击Unity的`Tools/PuerTS/Generate For xIl2cpp mode (all in one without wrapper)`。
 
 ### FAQ
 1. ios构建时报hash_map头找不到。
     Unity构建时，一部分头文件不会自动打包到产物xcode项目里(在2021及以下版本常见)。你可以在`你的Unity.app/Contents/il2cpp/external/`下找到缺失的内容，复制到`iosbuild目录/Libraries/external/`即可
 2. ios构建时报 `ReentrantLock is ambigious`
-    在2022常见。解决办法参见https://github.com/Tencent/puerts/issues/1428
+    在2022常见。解决办法：
+    
+修改/Applications/Unity/Hub/Editor/2022.3.47f1c1/PlaybackEngines/iOSSupport/il2cpp/libil2cpp/il2cpp-config.h （根据你安装的unity的实际路径）
+
+在#pragma once后加入宏定义：
+```
+#pragma once
+
+#define BASELIB_INLINE_NAMESPACE il2cpp_baselib //this line fix 'ReentrantLock is ambigious'
+
+#include <string.h>
+```
+分析参见issue: https://github.com/Tencent/puerts/issues/1428
+    

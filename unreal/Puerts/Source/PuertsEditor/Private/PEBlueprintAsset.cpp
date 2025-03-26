@@ -999,7 +999,7 @@ void UPEBlueprintAsset::SetupAttachment(FName InComponentName, FName InParentCom
         {
             NeedSave = true;
             Blueprint->SimpleConstructionScript->RemoveNode(SCS_Node);
-            USceneComponent* SceneComponentTemplate = Cast<USceneComponent>(SCS_Node->ComponentClass);
+            USceneComponent* SceneComponentTemplate = Cast<USceneComponent>(SCS_Node->ComponentClass->GetDefaultObject());
             if (SceneComponentTemplate)
             {
                 // Save current state
@@ -1152,7 +1152,7 @@ void UPEBlueprintAsset::AddMemberVariable(FName NewVarName, FPEGraphPinType InGr
 
         // The following code recalculates the final flags.
         // Variables added to the blueprint via FBlueprintEditorUtils::AddMemberVariable come with some default flags.
-        InFlags |= CPF_Edit | CPF_BlueprintVisible | CPF_DisableEditOnInstance;
+        InFlags |= CPF_Edit | CPF_BlueprintVisible;
 
         if (Blueprint->NewVariables[VarIndex].VarType.PinCategory == UEdGraphSchema_K2::PC_MCDelegate)
         {

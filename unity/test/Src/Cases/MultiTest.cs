@@ -196,5 +196,73 @@ namespace Puerts.UnitTest
             Assert.True(true);
         }
 #endif
+
+#if !UNITY_WEBGL || UNITY_EDITOR
+        [Test]
+        public void MultiDiffBackend()
+        {
+            string backendStr = null;
+            string errMsg = null;
+            bool createEnvSucess = false;
+            Action<string> Log = (string msg) =>
+            {
+#if PUERTS_GENERAL
+                Console.WriteLine(msg);
+#else
+                UnityEngine.Debug.Log(msg);
+#endif
+            };
+            JsEnv jsEnv = null;
+            try
+            {
+                jsEnv = new JsEnv(UnitTestEnv.GetLoader(), -1, BackendType.V8, IntPtr.Zero, IntPtr.Zero);
+                backendStr = jsEnv.Eval<string>(@"((typeof gc) != 'undefined' || (typeof v8) != 'undefined') ? 'v8': 'quickjs';");
+                jsEnv.Dispose();
+                createEnvSucess = true;
+            }
+            catch(Exception e)
+            {
+                errMsg = e.ToString();
+            }
+            if (createEnvSucess)
+            {
+                Log("create v8 backend success");
+                Assert.AreEqual("v8", backendStr);
+                Assert.True(jsEnv.Backend is BackendV8 || jsEnv.Backend is BackendNodeJS);
+            }
+            else
+            {
+                Log("create v8 backend fail: " + errMsg);
+                Assert.True(errMsg.Contains("create jsengine fail for V8"));
+            }
+
+            backendStr = null;
+            errMsg = null;
+            createEnvSucess = false;
+            jsEnv = null;
+            try
+            {
+                jsEnv = new JsEnv(UnitTestEnv.GetLoader(), -1, BackendType.QuickJS, IntPtr.Zero, IntPtr.Zero);
+                backendStr = jsEnv.Eval<string>(@"((typeof gc) != 'undefined' || (typeof v8) != 'undefined') ? 'v8': 'quickjs';");
+                jsEnv.Dispose();
+                createEnvSucess = true;
+            }
+            catch (Exception e)
+            {
+                errMsg = e.ToString();
+            }
+            if (createEnvSucess)
+            {
+                Log("create quickjs backend success");
+                Assert.AreEqual("quickjs", backendStr);
+                Assert.True(jsEnv.Backend is BackendQuickJS);
+            }
+            else
+            {
+                Log("create quickjs backend fail: " + errMsg);
+                Assert.True(errMsg.Contains("create jsengine fail for QuickJS"));
+            }
+        }
+#endif
     }
 }

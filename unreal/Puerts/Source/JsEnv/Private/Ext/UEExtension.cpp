@@ -81,7 +81,12 @@ static void FText_Format(const v8::FunctionCallbackInfo<v8::Value>& Info)
 }
 #endif
 
-struct AutoRegisterForUE
+#if ENGINE_MAJOR_VERSION > 4
+UsingUClass(AActor);
+UsingUStruct(FHitResult)
+#endif
+
+    struct AutoRegisterForUE
 {
     AutoRegisterForUE()
     {
@@ -129,6 +134,10 @@ struct AutoRegisterForUE
             .Function("FromString", SelectFunction(FText(*)(const FString&), &FText::FromString))
             .Function("Format", FText_Format, &FormatSignature)
             .Register();
+#endif
+
+#if ENGINE_MAJOR_VERSION > 4
+        PUERTS_NAMESPACE::DefineClass<FHitResult>().Method("GetActor", MakeFunction(&FHitResult::GetActor)).Register();
 #endif
     }
 };

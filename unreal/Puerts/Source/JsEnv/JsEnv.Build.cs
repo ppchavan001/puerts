@@ -177,6 +177,12 @@ public class JsEnv : ModuleRules
         string coreJSPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "Content"));
         string destDirName = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "..", "..", "Content"));
         DirectoryCopy(coreJSPath, destDirName, true);
+
+        // 每次build时拷贝一些手写的.d.ts到Typing目录以同步更新
+        string srcDtsDirName  = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "Typing"));
+        string dstDtsDirName = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "..", "..", "Typing"));
+        DirectoryCopy(srcDtsDirName, dstDtsDirName, true);
+
     }
 
     void OldThirdParty(ReadOnlyTargetRules Target)
@@ -643,10 +649,14 @@ public class JsEnv : ModuleRules
             PublicDefinitions.Add("WITH_QJS_NAMESPACE_SUFFIX=1");
             PublicDefinitions.Add("QJSV8NAMESPACE=v8_qjs");
         }
+        
+        string ThirdPartyPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "ThirdParty"));
+        string HeaderPath = Path.GetFullPath(Path.Combine(ThirdPartyPath, "Include"));
+        PublicIncludePaths.AddRange(new string[] { Path.Combine(HeaderPath, "websocketpp") });
+        PublicIncludePaths.AddRange(new string[] { Path.Combine(HeaderPath, "asio") });
+        PublicIncludePaths.AddRange(new string[] { Path.Combine(ThirdPartyPath, "quickjs", "Inc") });
 
-        PublicIncludePaths.AddRange(new string[] { Path.Combine(ModuleDirectory, "..", "..", "ThirdParty", "quickjs", "Inc") });
-
-        string LibraryPath = Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "ThirdParty", "quickjs", "Lib"));
+        string LibraryPath = Path.GetFullPath(Path.Combine(ThirdPartyPath, "quickjs", "Lib"));
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             string V8LibraryPath = Path.Combine(LibraryPath, "Win64MD");

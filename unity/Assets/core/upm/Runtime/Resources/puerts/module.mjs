@@ -161,7 +161,7 @@ class ModuleCache extends Map {
     }
 }
 
-const exportsCache = new ModuleCache();
+const exportsCache = typeof WeakRef === 'function' ? new ModuleCache() : new Map();
 const tmpModuleStorage = new Map();
 const builtinModules = new Map([["csharp", CS], ["puer", puer], ["puerts", puer]]);
 
@@ -230,9 +230,13 @@ function createLazyRequire(referer) {
         let fullPath = joinAsPosix(requiringDir, specifier);
         
         let key = fullPath;
-        let res = exportsCache.get(key) || tmpModuleStorage.get(key);
+        let res = exportsCache.get(key);
         if (res) {
             return res;
+        }
+        const tmpModule = tmpModuleStorage.get(key);
+        if (tmpModule) {
+            return tmpModule.exports;
         }
         
         let {content , debugPath} = puer.loadFile(fullPath);
@@ -317,6 +321,7 @@ function createLazyRequire(referer) {
         const res = {__specifier: specifier}
         const proxy = new Proxy(res, {
             get: function(target, name, receiver) {
+                if (name === '__esModule') return true;
                 //console.log(`proxy for ${name} get`);
                 let m = doRequire(target);
                 return Reflect.get(m, name, receiver);
@@ -346,11 +351,21 @@ function gcModuleCache () {
     return exportsCache.gc();
 }
 
+function deleteModuleCache (specifier) {
+    return exportsCache.delete(specifier);
+}
+
+function hasModuleCache (specifier) {
+    return exportsCache.has(specifier);
+}
+
 puer.module = {
     createRequire: createLazyRequire,
     clearModuleCache: clearModuleCache,
     statModuleCache: statModuleCache,
     gcModuleCache: gcModuleCache,
+    deleteModuleCache: deleteModuleCache,
+    hasModuleCache: hasModuleCache
 }
 
-export { createLazyRequire as createRequire, clearModuleCache, statModuleCache,  gcModuleCache};
+export { createLazyRequire as createRequire, clearModuleCache, statModuleCache, gcModuleCache, deleteModuleCache, hasModuleCache};

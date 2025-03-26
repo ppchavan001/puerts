@@ -23,30 +23,54 @@
     };                                                \
     }
 
-#define __DefCDataPointerConverter_v8_impl(CLS)                                                   \
-    namespace PUERTS_NAMESPACE                                                                    \
-    {                                                                                             \
-    namespace v8_impl                                                                             \
-    {                                                                                             \
-    template <>                                                                                   \
-    struct Converter<CLS*>                                                                        \
-    {                                                                                             \
-        static v8::Local<v8::Value> toScript(v8::Local<v8::Context> context, CLS* value)          \
-        {                                                                                         \
-            return ::PUERTS_NAMESPACE::DataTransfer::FindOrAddCData(                              \
-                context->GetIsolate(), context, DynamicTypeId<CLS>::get(value), value, true);     \
-        }                                                                                         \
-        static CLS* toCpp(v8::Local<v8::Context> context, const v8::Local<v8::Value>& value)      \
-        {                                                                                         \
-            return ::PUERTS_NAMESPACE::DataTransfer::GetPointerFast<CLS>(value.As<v8::Object>()); \
-        }                                                                                         \
-        static bool accept(v8::Local<v8::Context> context, const v8::Local<v8::Value>& value)     \
-        {                                                                                         \
-            return ::PUERTS_NAMESPACE::DataTransfer::IsInstanceOf(                                \
-                context->GetIsolate(), StaticTypeId<CLS>::get(), value.As<v8::Object>());         \
-        }                                                                                         \
-    };                                                                                            \
-    }                                                                                             \
+#define __DefCDataPointerConverter_v8_impl(CLS)                                                                            \
+    namespace PUERTS_NAMESPACE                                                                                             \
+    {                                                                                                                      \
+    namespace v8_impl                                                                                                      \
+    {                                                                                                                      \
+    template <>                                                                                                            \
+    struct Converter<CLS*>                                                                                                 \
+    {                                                                                                                      \
+        static v8::Local<v8::Value> toScript(v8::Local<v8::Context> context, CLS* value)                                   \
+        {                                                                                                                  \
+            return ::PUERTS_NAMESPACE::DataTransfer::FindOrAddCData(                                                       \
+                context->GetIsolate(), context, DynamicTypeId<CLS>::get(value), value, true);                              \
+        }                                                                                                                  \
+        static CLS* toCpp(v8::Local<v8::Context> context, const v8::Local<v8::Value>& value)                               \
+        {                                                                                                                  \
+            return ::PUERTS_NAMESPACE::DataTransfer::GetPointerFast<CLS>(value.As<v8::Object>());                          \
+        }                                                                                                                  \
+        static bool accept(v8::Local<v8::Context> context, const v8::Local<v8::Value>& value)                              \
+        {                                                                                                                  \
+            return ::PUERTS_NAMESPACE::DataTransfer::IsInstanceOf(context->GetIsolate(), StaticTypeId<CLS>::get(), value); \
+        }                                                                                                                  \
+    };                                                                                                                     \
+    }                                                                                                                      \
+    }
+
+#define __DefCDataConverter_v8_impl(CLS)                                                                                   \
+    namespace PUERTS_NAMESPACE                                                                                             \
+    {                                                                                                                      \
+    namespace v8_impl                                                                                                      \
+    {                                                                                                                      \
+    template <>                                                                                                            \
+    struct Converter<CLS>                                                                                                  \
+    {                                                                                                                      \
+        static v8::Local<v8::Value> toScript(v8::Local<v8::Context> context, CLS value)                                    \
+        {                                                                                                                  \
+            return ::PUERTS_NAMESPACE::DataTransfer::FindOrAddCData(                                                       \
+                context->GetIsolate(), context, DynamicTypeId<CLS>::get(&value), new CLS(value), false);                   \
+        }                                                                                                                  \
+        static CLS toCpp(v8::Local<v8::Context> context, const v8::Local<v8::Value>& value)                                \
+        {                                                                                                                  \
+            return *::PUERTS_NAMESPACE::DataTransfer::GetPointerFast<CLS>(value.As<v8::Object>());                         \
+        }                                                                                                                  \
+        static bool accept(v8::Local<v8::Context> context, const v8::Local<v8::Value>& value)                              \
+        {                                                                                                                  \
+            return ::PUERTS_NAMESPACE::DataTransfer::IsInstanceOf(context->GetIsolate(), StaticTypeId<CLS>::get(), value); \
+        }                                                                                                                  \
+    };                                                                                                                     \
+    }                                                                                                                      \
     }
 
 namespace PUERTS_NAMESPACE
@@ -68,7 +92,8 @@ struct API
     typedef v8::Local<v8::Context> ContextType;
     typedef v8::Local<v8::Value> ValueType;
     typedef v8::FunctionCallback FunctionCallbackType;
-    typedef InitializeFunc InitializeFuncType;
+    typedef void* (*InitializeFuncType)(const v8::FunctionCallbackInfo<v8::Value>& Info);
+    typedef void (*FinalizeFuncType)(void* Ptr, void* ClassData, void* EnvData);
     typedef JSFunctionInfo GeneralFunctionInfo;
     typedef JSPropertyInfo GeneralPropertyInfo;
     typedef NamedFunctionInfo GeneralFunctionReflectionInfo;
@@ -148,7 +173,7 @@ struct API
     }
 
     template <typename T, typename CDB>
-    static void Register(FinalizeFunc Finalize, const CDB& Cdb)
+    static void Register(FinalizeFuncType Finalize, const CDB& Cdb)
     {
         const bool isUEType = is_uetype<T>::value;
         static std::vector<JSFunctionInfo> s_functions_{};
@@ -175,23 +200,23 @@ struct API
             ClassDef.SuperTypeId = Cdb.superTypeId_;
         }
 
-        ClassDef.Initialize = Cdb.constructor_;
+        ClassDef.SetInitialize(Cdb.constructor_);
         ClassDef.Finalize = Finalize;
 
         s_functions_ = std::move(Cdb.functions_);
-        s_functions_.push_back({nullptr, nullptr, nullptr});
+        s_functions_.push_back(JSFunctionInfo());
         ClassDef.Functions = s_functions_.data();
 
         s_methods_ = std::move(Cdb.methods_);
-        s_methods_.push_back({nullptr, nullptr, nullptr});
+        s_methods_.push_back(JSFunctionInfo());
         ClassDef.Methods = s_methods_.data();
 
         s_properties_ = std::move(Cdb.properties_);
-        s_properties_.push_back(JSPropertyInfo{nullptr, nullptr, nullptr, nullptr});
+        s_properties_.push_back(JSPropertyInfo());
         ClassDef.Properties = s_properties_.data();
 
         s_variables_ = std::move(Cdb.variables_);
-        s_variables_.push_back(JSPropertyInfo{nullptr, nullptr, nullptr, nullptr});
+        s_variables_.push_back(JSPropertyInfo());
         ClassDef.Variables = s_variables_.data();
 
         s_constructorInfos_ = std::move(Cdb.constructorInfos_);
@@ -615,7 +640,7 @@ struct Converter<T, typename std::enable_if<std::is_copy_constructible<T>::value
     }
     static bool accept(v8::Local<v8::Context> context, const v8::Local<v8::Value>& value)
     {
-        return DataTransfer::IsInstanceOf(context->GetIsolate(), StaticTypeId<T>::get(), value.As<v8::Object>());
+        return DataTransfer::IsInstanceOf(context->GetIsolate(), StaticTypeId<T>::get(), value);
     }
 };
 

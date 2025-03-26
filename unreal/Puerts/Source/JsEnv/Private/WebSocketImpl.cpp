@@ -72,20 +72,6 @@ public:
 #endif
 #endif
     }
-
-    static v8::Local<v8::ArrayBuffer> NewArrayBuffer(v8::Local<v8::Context> Context, void* Data, size_t DataLength)
-    {
-#if defined(HAS_ARRAYBUFFER_NEW_WITHOUT_STL)
-        return v8::ArrayBuffer_New_Without_Stl(Context->GetIsolate(), Data, DataLength);
-#else
-#if USING_IN_UNREAL_ENGINE
-        return v8::ArrayBuffer::New(Context->GetIsolate(), Data, DataLength);
-#else
-        auto Backing = v8::ArrayBuffer::NewBackingStore(Data, DataLength, v8::BackingStore::EmptyDeleter, nullptr);
-        return v8::ArrayBuffer::New(Context->GetIsolate(), std::move(Backing));
-#endif
-#endif
-    }
 };
 #endif
 
@@ -123,7 +109,9 @@ public:
 
     void Close(const v8::FunctionCallbackInfo<v8::Value>& Info);
 
-    void Close(websocketpp::close::status::value const code, std::string const& reason);
+    void Statue(const v8::FunctionCallbackInfo<v8::Value>& Info);
+
+    void CloseImmediately(websocketpp::close::status::value const code, std::string const& reason);
 
     void PollOne();
 
@@ -157,7 +145,7 @@ private:
 static void OnGarbageCollectedWithFree(const v8::WeakCallbackInfo<V8WebSocketClientImpl>& Data)
 {
     // UE_LOG(LogTemp, Warning, TEXT(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> auto gc %p"), Data.GetParameter());
-    Data.GetParameter()->Close(websocketpp::close::status::normal, "");
+    Data.GetParameter()->CloseImmediately(websocketpp::close::status::normal, "");
     delete Data.GetParameter();
 }
 
@@ -172,7 +160,9 @@ V8WebSocketClientImpl::V8WebSocketClientImpl(v8::Isolate* InIsolate, v8::Local<v
 websocketpp::lib::shared_ptr<puerts_asio::ssl::context> on_tls_init(websocketpp::connection_hdl)
 {
     auto ctx = websocketpp::lib::make_shared<puerts_asio::ssl::context>(websocketpp::lib::puerts_asio::ssl::context::sslv23);
-    ctx->set_verify_mode(puerts_asio::ssl::verify_none);
+
+    websocketpp::lib::error_code ec;
+    ctx->set_verify_mode(puerts_asio::ssl::verify_none, ec);
     return ctx;
 }
 #endif
@@ -199,7 +189,7 @@ void V8WebSocketClientImpl::Connect(const v8::FunctionCallbackInfo<v8::Value>& I
     if (ec)
     {
         std::stringstream ss;
-        ss << "could not create connection because: " << ec.message() << std::endl;
+        ss << "could not create connection because: " << ec.message() << "[" << ec.value() << "]" << std::endl;
         FV8Utils::ThrowException(Isolate, ss.str().c_str());
         return;
     }
@@ -256,7 +246,7 @@ void V8WebSocketClientImpl::Send(const v8::FunctionCallbackInfo<v8::Value>& Info
     if (ec)
     {
         std::stringstream ss;
-        ss << "could not create connection because: " << ec.message() << std::endl;
+        ss << "could send because: " << ec.message() << "[" << ec.value() << "]" << std::endl;
         FV8Utils::ThrowException(Isolate, ss.str().c_str());
     }
 }
@@ -307,14 +297,40 @@ void V8WebSocketClientImpl::Close(const v8::FunctionCallbackInfo<v8::Value>& Inf
         reason = *v8::String::Utf8Value(InIsolate, Info[1]);
     }
 
-    Close(code, reason);
+    if (!Handle.expired())
+    {
+        websocketpp::lib::error_code ec;
+        Client.close(Handle, code, reason, ec);
+        if (ec)
+        {
+            std::stringstream ss;
+            ss << "close fail: " << ec.message() << "[" << ec.value() << "]" << std::endl;
+            FV8Utils::ThrowException(Isolate, ss.str().c_str());
+        }
+    }
+    Cleanup();
 }
 
-void V8WebSocketClientImpl::Close(websocketpp::close::status::value const code, std::string const& reason)
+void V8WebSocketClientImpl::Statue(const v8::FunctionCallbackInfo<v8::Value>& Info)
+{
+    websocketpp::lib::error_code ec;
+    Client.ping(Handle, "", ec);
+    auto isolate = Info.GetIsolate();
+    auto context = isolate->GetCurrentContext();
+    auto res = v8::Array::New(isolate);
+
+    res->Set(context, 0, v8::Int32::New(isolate, ec.value())).Check();
+    res->Set(context, 1,
+        v8::String::NewFromUtf8(isolate, ec.message().c_str(), v8::NewStringType::kNormal, ec.message().size()).ToLocalChecked());
+    Info.GetReturnValue().Set(res);
+}
+
+void V8WebSocketClientImpl::CloseImmediately(websocketpp::close::status::value const code, std::string const& reason)
 {
     if (!Handle.expired())
     {
-        Client.close(Handle, code, reason);
+        websocketpp::lib::error_code ec;
+        Client.close(Handle, code, reason, ec);
     }
     Cleanup();
 }
@@ -358,8 +374,10 @@ void V8WebSocketClientImpl::OnMessage(wspp_connection_hdl InHandle, wspp_message
         }
         else if (InMessage->get_opcode() == websocketpp::frame::opcode::BINARY)
         {
-            args[0] = DataTransfer::NewArrayBuffer(
-                GContext.Get(Isolate), (void*) InMessage->get_payload().c_str(), InMessage->get_payload().size());
+            v8::Local<v8::ArrayBuffer> Ab = v8::ArrayBuffer::New(Isolate, InMessage->get_payload().size());
+            void* Buff = DataTransfer::GetArrayBufferData(Ab);
+            ::memcpy(Buff, InMessage->get_payload().data(), InMessage->get_payload().size());
+            args[0] = Ab;
         }
         else
         {
@@ -396,13 +414,14 @@ void V8WebSocketClientImpl::OnFail(wspp_connection_hdl InHandle)
     if (!Handles[ON_FAIL].IsEmpty())
     {
         wspp_client::connection_ptr con = Client.get_con_from_hdl(InHandle);
-        v8::Local<v8::Value> args[1] = {v8::String::NewFromUtf8(
-            Isolate, con->get_ec().message().c_str(), v8::NewStringType::kNormal, con->get_ec().message().size())
-                                            .ToLocalChecked()};
+        std::stringstream ss;
+        ss << "on fail: " << con->get_ec().message() << "[" << con->get_ec().value() << "]" << std::endl;
+        v8::Local<v8::Value> args[1] = {
+            v8::String::NewFromUtf8(Isolate, ss.str().c_str(), v8::NewStringType::kNormal, ss.str().size()).ToLocalChecked()};
         // must not raise exception in js, recommend just push a pending msg and process later.
         Handles[ON_FAIL].Get(Isolate)->Call(GContext.Get(Isolate), v8::Undefined(Isolate), 1, args);
     }
-    Close(websocketpp::close::status::abnormal_close, "");
+    CloseImmediately(websocketpp::close::status::abnormal_close, "");
 }
 
 }    // namespace PUERTS_NAMESPACE
@@ -440,6 +459,13 @@ void InitWebsocketPPWrap(v8::Local<v8::Context> Context)
             [](const v8::FunctionCallbackInfo<v8::Value>& Info) {
                 static_cast<PUERTS_NAMESPACE::V8WebSocketClientImpl*>(Info.Holder()->GetAlignedPointerFromInternalField(0))
                     ->Close(Info);
+            }));
+
+    WSTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(Isolate, "statue").ToLocalChecked(),
+        v8::FunctionTemplate::New(Isolate,
+            [](const v8::FunctionCallbackInfo<v8::Value>& Info) {
+                static_cast<PUERTS_NAMESPACE::V8WebSocketClientImpl*>(Info.Holder()->GetAlignedPointerFromInternalField(0))
+                    ->Statue(Info);
             }));
 
     WSTemplate->PrototypeTemplate()->Set(v8::String::NewFromUtf8(Isolate, "poll").ToLocalChecked(),
