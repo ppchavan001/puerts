@@ -15,7 +15,7 @@ public class DeclarationGenerator : ModuleRules
     {
         PublicIncludePaths.AddRange(
             new string[] {
-                "Programs/UnrealHeaderTool/Public",
+                "Programs/UnrealBuildTool/",
             }
         );
         PublicDependencyModuleNames.AddRange(
