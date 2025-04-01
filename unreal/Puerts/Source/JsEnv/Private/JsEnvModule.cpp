@@ -22,7 +22,7 @@ PRAGMA_DISABLE_UNDEFINED_IDENTIFIER_WARNINGS
 #include "libplatform/libplatform.h"
 
 #ifdef WITH_NODEAPI
-#include <NodeAPI/NodeAPIHook.cpp>
+#include <NodeAPI/NodeAPIHook.h>
 #endif    // WITH_NODEAPI
 
 #pragma warning(pop)

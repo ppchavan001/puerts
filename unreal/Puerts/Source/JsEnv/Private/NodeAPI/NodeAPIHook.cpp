@@ -1,5 +1,4 @@
-#pragma once
-
+#include "NodeAPIHook.h"
 #ifdef NODEAPI_WITH_MINHOOK
 #include "Win64/MinHookWrapper.cpp"
 #endif    // NODEAPI_WITH_MINHOOK
