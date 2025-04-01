@@ -1,5 +1,3 @@
-#pragma once
-
 #ifdef NODEAPI_WITH_MINHOOK
 
 #include <windows.h>
@@ -41,7 +39,7 @@ void InitializeMinHook()
 }
 
 // Cleanup hooks
-void CleanupMinHook()
+void CleanupMinHookImpl()
 {
     MH_DisableHook(MH_ALL_HOOKS);
     MH_Uninitialize();

@@ -1,6 +1,6 @@
 #include "NodeAPIHook.h"
 #ifdef NODEAPI_WITH_MINHOOK
-#include "Win64/MinHookWrapper.cpp"
+#include "Win64/MinHookWrapper.h"
 #endif    // NODEAPI_WITH_MINHOOK
 
 void InitHooks()
@@ -13,6 +13,6 @@ void InitHooks()
 void CleanupHooks()
 {
 #ifdef NODEAPI_WITH_MINHOOK
-    CleanupMinHook();
+    CleanupMinHookImpl();
 #endif    // NODEAPI_WITH_MINHOOK
 }
