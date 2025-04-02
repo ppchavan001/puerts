@@ -1,5 +1,6 @@
 #ifdef NODEAPI_WITH_MINHOOK
 
+#include "MinHookWrapper.h"
 #include <windows.h>
 #include "MinHook.h"
 
