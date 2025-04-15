@@ -91,8 +91,9 @@ try {
 
     DeleteCache
     
-    $nodejsPath = Join-Path -Path $PSScriptRoot -ChildPath "..\unreal\Puerts\ThirdParty\nodejs_16"
+    $nodejsPath = Join-Path -Path $PSScriptRoot -ChildPath "..\unreal\Puerts\ThirdParty"
     $nodejsPath = Resolve-Path -Path $nodejsPath
+    $nodejsPath = Join-Path -Path $nodejsPath -ChildPath "nodejs_16"
 
     Write-Warning("NodeJS lib path [$nodejsPath]")
     if (Test-Path -Path $nodejsPath -PathType Container) {
