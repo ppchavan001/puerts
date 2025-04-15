@@ -10,6 +10,9 @@ if (Test-Path $logFile) {
     Remove-Item  -Force $logFile
 }
 
+$deleteCacheAutomatically = $true
+
+
 Start-Transcript -Path $logFile
 
 #endregion
@@ -47,6 +50,11 @@ function Delete {
 }
 
 function DeleteCache {
+
+    if ($deleteCacheAutomatically -eq $false) {
+        return
+    }
+
     $maxAttempts = 5
     $attempt = 0
     while ($attempt -lt $maxAttempts) {
