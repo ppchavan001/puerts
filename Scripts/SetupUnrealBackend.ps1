@@ -171,7 +171,7 @@ try {
         }
 
         Print("Extracting file to : $tarLoc")
-        $pluginTarget = Join-Path -Path $currentDir -ChildPath "../unreal/Puerts/ThirdParty/"
+        $pluginTarget = Join-Path -Path $currentDir -ChildPath "../unreal/Puerts/ThirdParty"
         New-Item -ItemType Directory -Path $pluginTarget -Force
         $pluginTarget = Resolve-Path($pluginTarget)
     
