@@ -507,21 +507,30 @@ export namespace PuertsJSEngine {
     export type EngineConstructorParam = UnityAPI;
     
     export interface UnityAPI {
-        UTF8ToString: (strPtr: CSString) => string,
+        UTF8ToString: (strPtr: CSString, maxRead?: number) => string,
+        UTF16ToString: (strPtr: CSString, maxRead?: number) => string,
         _malloc: (size: number) => number,
         _free: (ptr: number) => void,
         _setTempRet0: (value: number) => void,
         stringToUTF8: (str: string, buffer: any, size: number) => any,
         lengthBytesUTF8: (str: string) => number,
+        stringToUTF16: (str: string, buffer: any, size: number) => any,
+        lengthBytesUTF16: (str: string) => number,
         stackAlloc: (size: number) => number,
         stackSave: () => number,
         stackRestore: (stack: number) => void,
+        getWasmTableEntry: (index: number) => Function,
         addFunction: (func: Function, sig: string) => number,
         removeFunction: (index: number) => void,
         _CallCSharpFunctionCallback: (functionPtr: IntPtr, selfPtr: CSIdentifier, infoIntPtr: MockIntPtr, paramLen: number, callbackIdx: number) => void;
         _CallCSharpConstructorCallback: (functionPtr: IntPtr, infoIntPtr: MockIntPtr, paramLen: number, callbackIdx: number) => number;
         _CallCSharpDestructorCallback: (functionPtr: IntPtr, selfPtr: CSIdentifier, callbackIdx: number) => void;
-        InjectPapiGLNativeImpl: (apiPtr: number) => void;
+        PApiCallbackWithScope: (nativeCallback:number, ffi: number, info: number) => void;
+        PApiConstructorWithScope: (nativeCallback:number, ffi: number, info: number) => number;
+        WasmAdd: (a: number, b: number) => number;
+        IndirectWasmAdd: (func: number, a: number, b: number) => number;
+        GetWasmAddPtr:() => number;
+        InjectPapiGLNativeImpl: () => number;
         HEAP8: Int8Array;
         HEAPU8: Uint8Array;
         HEAP32: Int32Array;
@@ -551,20 +560,29 @@ export class PuertsJSEngine {
         this.functionCallbackInfoPtrManager = new FunctionCallbackInfoPtrManager(this);
         const { 
             UTF8ToString,
+            UTF16ToString,
             _malloc,
             _free,
             _setTempRet0,
             stringToUTF8,
             lengthBytesUTF8,
+            stringToUTF16,
+            lengthBytesUTF16,
             stackSave,
             stackRestore,
             stackAlloc,
+            getWasmTableEntry,
             addFunction,
             removeFunction,
             _CallCSharpFunctionCallback,
             _CallCSharpConstructorCallback,
             _CallCSharpDestructorCallback,
             InjectPapiGLNativeImpl,
+            PApiCallbackWithScope,
+            PApiConstructorWithScope,
+            WasmAdd,
+            IndirectWasmAdd,
+            GetWasmAddPtr,
             HEAP8,
             HEAPU8,
             HEAP32,
@@ -576,20 +594,29 @@ export class PuertsJSEngine {
 
         this.unityApi = {
             UTF8ToString,
+            UTF16ToString,
             _malloc,
             _free,
             _setTempRet0,
             stringToUTF8,
             lengthBytesUTF8,
+            stringToUTF16,
+            lengthBytesUTF16,
             stackSave,
             stackRestore,
             stackAlloc,
+            getWasmTableEntry,
             addFunction,
             removeFunction,
             _CallCSharpFunctionCallback,
             _CallCSharpConstructorCallback,
             _CallCSharpDestructorCallback,
             InjectPapiGLNativeImpl,
+            PApiCallbackWithScope,
+            PApiConstructorWithScope,
+            WasmAdd,
+            IndirectWasmAdd,
+            GetWasmAddPtr,
 
             HEAP8,
             HEAPU8,

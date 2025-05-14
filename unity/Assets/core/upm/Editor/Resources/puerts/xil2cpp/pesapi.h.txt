@@ -79,6 +79,8 @@
 
 #else
 
+#ifdef PUERTS_SHARED 
+
 #define PESAPI_MODULE(modname, initfunc)                                                                   \
     EXTERN_C_START                                                                                         \
     PESAPI_MODULE_EXPORT void PESAPI_MODULE_INITIALIZER(modname)(pesapi_func_ptr * func_ptr_array);        \
@@ -104,6 +106,19 @@
         return PESAPI_VERSION;                                                                             \
     }
 
+#else
+
+#define PESAPI_MODULE(modname, initfunc)                                                                   \
+    EXTERN_C_START                                                                                         \
+    PESAPI_MODULE_EXPORT void PESAPI_MODULE_INITIALIZER(modname)(pesapi_func_ptr * func_ptr_array);        \
+    EXTERN_C_END                                                                                           \
+    PESAPI_MODULE_EXPORT void PESAPI_MODULE_INITIALIZER(modname)(pesapi_func_ptr * func_ptr_array)         \
+    {                                                                                                      \
+        initfunc();                                                                                        \
+    }
+
+#endif
+
 #endif
 
 EXTERN_C_START
@@ -123,6 +138,8 @@ typedef struct pesapi_scope__* pesapi_scope;
 typedef struct pesapi_type_info__* pesapi_type_info;
 typedef struct pesapi_signature_info__* pesapi_signature_info;
 typedef struct pesapi_property_descriptor__* pesapi_property_descriptor;
+
+struct pesapi_ffi;
 
 typedef void (*pesapi_callback)(struct pesapi_ffi* apis, pesapi_callback_info info);
 typedef void* (*pesapi_constructor)(struct pesapi_ffi* apis, pesapi_callback_info info);
@@ -150,6 +167,7 @@ typedef pesapi_value (*pesapi_create_int64_func)(pesapi_env env, int64_t value);
 typedef pesapi_value (*pesapi_create_uint64_func)(pesapi_env env, uint64_t value);
 typedef pesapi_value (*pesapi_create_double_func)(pesapi_env env, double value);
 typedef pesapi_value (*pesapi_create_string_utf8_func)(pesapi_env env, const char* str, size_t length);
+typedef pesapi_value (*pesapi_create_string_utf16_func)(pesapi_env env, const uint16_t* str, size_t length);
 typedef pesapi_value (*pesapi_create_binary_func)(pesapi_env env, void* str, size_t length);
 typedef pesapi_value (*pesapi_create_array_func)(pesapi_env env);
 typedef pesapi_value (*pesapi_create_object_func)(pesapi_env env);
@@ -163,6 +181,7 @@ typedef int64_t (*pesapi_get_value_int64_func)(pesapi_env env, pesapi_value valu
 typedef uint64_t (*pesapi_get_value_uint64_func)(pesapi_env env, pesapi_value value);
 typedef double (*pesapi_get_value_double_func)(pesapi_env env, pesapi_value value);
 typedef const char* (*pesapi_get_value_string_utf8_func)(pesapi_env env, pesapi_value value, char* buf, size_t* bufsize);
+typedef const uint16_t* (*pesapi_get_value_string_utf16_func)(pesapi_env env, pesapi_value value, uint16_t* buf, size_t* bufsize);
 typedef void* (*pesapi_get_value_binary_func)(pesapi_env env, pesapi_value pvalue, size_t* bufsize);
 typedef uint32_t (*pesapi_get_array_length_func)(pesapi_env env, pesapi_value value);
 
@@ -194,7 +213,7 @@ typedef int (*pesapi_get_args_len_func)(pesapi_callback_info info);
 typedef pesapi_value (*pesapi_get_arg_func)(pesapi_callback_info info, int index);
 typedef pesapi_env (*pesapi_get_env_func)(pesapi_callback_info info);
 typedef void* (*pesapi_get_native_holder_ptr_func)(pesapi_callback_info info);
-typedef pesapi_value (*pesapi_get_holder_func)(pesapi_callback_info info);
+typedef const void* (*pesapi_get_native_holder_typeid_func)(pesapi_callback_info info);
 typedef void* (*pesapi_get_userdata_func)(pesapi_callback_info info);
 typedef void (*pesapi_add_return_func)(pesapi_callback_info info, pesapi_value value);
 typedef void (*pesapi_throw_by_string_func)(pesapi_callback_info pinfo, const char* msg);
@@ -246,6 +265,7 @@ struct pesapi_ffi
     pesapi_create_uint64_func create_uint64;
     pesapi_create_double_func create_double;
     pesapi_create_string_utf8_func create_string_utf8;
+    pesapi_create_string_utf16_func create_string_utf16;
     pesapi_create_binary_func create_binary;
     pesapi_create_array_func create_array;
     pesapi_create_object_func create_object;
@@ -258,6 +278,7 @@ struct pesapi_ffi
     pesapi_get_value_uint64_func get_value_uint64;
     pesapi_get_value_double_func get_value_double;
     pesapi_get_value_string_utf8_func get_value_string_utf8;
+    pesapi_get_value_string_utf16_func get_value_string_utf16;
     pesapi_get_value_binary_func get_value_binary;
     pesapi_get_array_length_func get_array_length;
     pesapi_is_null_func is_null;
@@ -285,7 +306,7 @@ struct pesapi_ffi
     pesapi_get_arg_func get_arg;
     pesapi_get_env_func get_env;
     pesapi_get_native_holder_ptr_func get_native_holder_ptr;
-    pesapi_get_holder_func get_holder;
+    pesapi_get_native_holder_typeid_func get_native_holder_typeid;
     pesapi_get_userdata_func get_userdata;
     pesapi_add_return_func add_return;
     pesapi_throw_by_string_func throw_by_string;

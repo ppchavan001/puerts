@@ -6,6 +6,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 you can get the english version change log at [Github Release](https://github.com/Tencent/puerts/releases)
 
+## [2.2.2] - 2025-5-13
+1. 解决webgl打包工具windows下会重复npm i安装的问题
+2. 微信小游戏一键导出的支持
+3. 解决“token overflowed internal buffer”编译错误，并加入DisallowedType的判断，wrap引用了值类型但没声明的情况，fix #2039
+4. webgl环境没有eval的异常不直接抛在js，这会导致程序halt
+5. 不再限制webgl下必须得用Puerts.WebGL.MainEnv.Get来创建JsEnv
+6. 支持Unity生成的“Faster (smaller) builds”选项（对应微信导出工具的il2cpp optimize size ） (#2046)
+7. 修正webgl环境下，原生setTimeout回调中访问C#报错的问题
+8. 优化掉类名和字段名的存放，方法名改为存放const char*指针，节省内存
+
+## [2.2.1] - 2025-4-25
+1. webgl也支持il2cpp优化特性了，并默认打开
+2. webgl版本通过PostBuild自动打包js资源，自动修改index.html
+3. webgl版本Editor不再依赖nodejs backend
+4. il2cpp优化特性通过utf16传递支持优化字符串传输性能
+6. il2cpp优化特性一些和之前版本的参数传递，判断不一致的修复
+7. 解决泛型实例递归引用自己导致生成代码死循环（上个提交把所有泛型类都过滤了），fix #2015
+8. il2cpp优化下，js函数转不了JsObject的问题，fix #2012
+
 ## [2.2.0] - 2025-3-18
 1. native_src_il2cpp合并到native_src
 2. il2cpp优化特性在android下不再要求静态库连接（有些unity不支持）

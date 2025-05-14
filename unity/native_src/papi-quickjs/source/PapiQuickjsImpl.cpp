@@ -26,8 +26,8 @@ inline JSContext* qjsContextFromPesapiEnv(pesapi_env v)
 
 inline JSValue *allocValueInCurrentScope(JSContext *ctx)
 {
-	auto scope = getCurrentScope(ctx);
-	return scope->allocValue();
+    auto scope = getCurrentScope(ctx);
+    return scope->allocValue();
 }
 
 JSValue literal_values_undefined = JS_UNDEFINED;
@@ -99,23 +99,23 @@ T pesapi_get_value_generic(pesapi_env env, pesapi_value pvalue, Func convertFunc
 template<typename Func>
 bool pesapi_is_generic(pesapi_env env, pesapi_value pvalue, Func convertFunc)
 {
-	auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx != nullptr)
-	{
-		return convertFunc(reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v);
-	}
-	return false;
+    auto ctx = qjsContextFromPesapiEnv(env);
+    if (ctx != nullptr)
+    {
+        return convertFunc(reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v);
+    }
+    return false;
 }
 
 template<typename Func>
 bool pesapi_is_generic_ctx(pesapi_env env, pesapi_value pvalue, Func convertFunc)
 {
-	auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx != nullptr)
-	{
-		return convertFunc(ctx, reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v);
-	}
-	return false;
+    auto ctx = qjsContextFromPesapiEnv(env);
+    if (ctx != nullptr)
+    {
+        return convertFunc(ctx, reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v);
+    }
+    return false;
 }
 
 // value process
@@ -162,6 +162,11 @@ pesapi_value pesapi_create_double(pesapi_env env, double value)
 pesapi_value pesapi_create_string_utf8(pesapi_env env, const char *str, size_t length)
 {
     return pesapi_create_generic2(env, str, length, JS_NewStringLen);
+}
+
+pesapi_value pesapi_create_string_utf16(pesapi_env env, const uint16_t *str, size_t length)
+{
+    return pesapi_create_generic2(env, str, length, JS_NewString16Len);
 }
 
 static JSValue JS_NewArrayBufferWrap(JSContext *ctx, void *bin, size_t len)
@@ -245,42 +250,48 @@ double pesapi_get_value_double(pesapi_env env, pesapi_value pvalue)
 const char* pesapi_get_value_string_utf8(pesapi_env env, pesapi_value pvalue, char* buf, size_t* bufsize)
 {
     auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx != nullptr)
-	{
+    if (ctx != nullptr)
+    {
         auto jsvalue = reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v;
-		if (buf == nullptr)
-		{
-			auto ret = JS_ToCString(ctx, jsvalue); // TODO: 优化
-			if (ret)
-			{
-				*bufsize = strlen(ret);
-				JS_FreeCString(ctx, ret);
-			}
-		}
-		else
-		{
-			auto ret = JS_ToCStringLen(ctx, bufsize, jsvalue);
-			if (ret)
-			{
-				strcpy(buf, ret);
-				JS_FreeCString(ctx, ret);
-			}
-		}
-	}
-	return buf;
+        if (buf == nullptr)
+        {
+            auto ret = JS_ToCString(ctx, jsvalue); // TODO: 优化
+            if (ret)
+            {
+                *bufsize = strlen(ret);
+                JS_FreeCString(ctx, ret);
+            }
+        }
+        else
+        {
+            auto ret = JS_ToCStringLen(ctx, bufsize, jsvalue);
+            if (ret)
+            {
+                strcpy(buf, ret);
+                JS_FreeCString(ctx, ret);
+            }
+        }
+    }
+    return buf;
+}
+
+const uint16_t* pesapi_get_value_string_utf16(pesapi_env env, pesapi_value pvalue, uint16_t* buf, size_t* bufsize)
+{
+    auto ctx = qjsContextFromPesapiEnv(env);
+    return JS_ToCString16Len(ctx, reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v, buf, bufsize);
 }
 
 void* pesapi_get_value_binary(pesapi_env env, pesapi_value pvalue, size_t* bufsize)
 {
     auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx != nullptr)
-	{
+    if (ctx != nullptr)
+    {
         auto jsvalue = reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v;
-		if (JS_IsArrayBuffer(jsvalue))
-		{
-			return JS_GetArrayBuffer(ctx, bufsize, jsvalue);
-		}
-		if (JS_IsArrayBufferView(jsvalue))
+        if (JS_IsArrayBuffer(jsvalue))
+        {
+            return JS_GetArrayBuffer(ctx, bufsize, jsvalue);
+        }
+        if (JS_IsArrayBufferView(jsvalue))
         {
             size_t byte_offset;
             size_t byte_length;
@@ -292,26 +303,26 @@ void* pesapi_get_value_binary(pesapi_env env, pesapi_value pvalue, size_t* bufsi
             *bufsize = byte_length;
             return buf + byte_offset;
         }
-	}
-	return nullptr;
+    }
+    return nullptr;
 }
 
 uint32_t pesapi_get_array_length(pesapi_env env, pesapi_value pvalue)
 {
     auto ctx = qjsContextFromPesapiEnv(env);
-	if (ctx != nullptr)
-	{
-		auto len = JS_GetProperty(ctx, reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v, JS_ATOM_length);
-		if (JS_IsException(len))
-		{
-			return 0;
-		}
-		uint32_t ret;
-		JS_ToUint32(ctx, &ret, len);
-		JS_FreeValue(ctx, len);
-		return ret;
-	}
-	return 0;
+    if (ctx != nullptr)
+    {
+        auto len = JS_GetProperty(ctx, reinterpret_cast<pesapi::qjsimpl::pesapi_value__*>(pvalue)->v, JS_ATOM_length);
+        if (JS_IsException(len))
+        {
+            return 0;
+        }
+        uint32_t ret;
+        JS_ToUint32(ctx, &ret, len);
+        JS_FreeValue(ctx, len);
+        return ret;
+    }
+    return 0;
 }
 
 bool pesapi_is_null(pesapi_env env, pesapi_value pvalue)
@@ -489,10 +500,11 @@ void* pesapi_get_native_holder_ptr(pesapi_callback_info pinfo)
     return (void*)mapper->GetNativeObjectPtr(info->this_val);
 }
 
-pesapi_value pesapi_get_holder(pesapi_callback_info pinfo)
+const void* pesapi_get_native_holder_typeid(pesapi_callback_info pinfo)
 {
     auto info = reinterpret_cast<pesapi::qjsimpl::pesapi_callback_info__*>(pinfo);
-    return pesapiValueFromQjsValue(&(info->this_val));
+    auto mapper = pesapi::qjsimpl::CppObjectMapper::Get(info->ctx);
+    return mapper->GetNativeObjectTypeId(info->this_val);
 }
 
 void* pesapi_get_userdata(pesapi_callback_info pinfo)
@@ -515,9 +527,9 @@ void pesapi_throw_by_string(pesapi_callback_info pinfo, const char* msg)
 {
     auto info = reinterpret_cast<pesapi::qjsimpl::pesapi_callback_info__*>(pinfo);
     info->res = JS_EXCEPTION;
-	info->ex = JS_NewError(info->ctx);
-	JS_DefinePropertyValue(info->ctx, info->ex, JS_ATOM_message, JS_NewString(info->ctx, msg),
-						   JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    info->ex = JS_NewError(info->ctx);
+    JS_DefinePropertyValue(info->ctx, info->ex, JS_ATOM_message, JS_NewString(info->ctx, msg),
+                           JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
 }
 
 pesapi_env_ref pesapi_create_env_ref(pesapi_env env)
@@ -872,6 +884,7 @@ pesapi_ffi g_pesapi_ffi {
     &pesapi_create_uint64,
     &pesapi_create_double,
     &pesapi_create_string_utf8,
+    &pesapi_create_string_utf16,
     &pesapi_create_binary,
     &pesapi_create_array,
     &pesapi_create_object,
@@ -884,6 +897,7 @@ pesapi_ffi g_pesapi_ffi {
     &pesapi_get_value_uint64,
     &pesapi_get_value_double,
     &pesapi_get_value_string_utf8,
+    &pesapi_get_value_string_utf16,
     &pesapi_get_value_binary,
     &pesapi_get_array_length,
     &pesapi_is_null,
@@ -911,7 +925,7 @@ pesapi_ffi g_pesapi_ffi {
     &pesapi_get_arg,
     &pesapi_get_env,
     &pesapi_get_native_holder_ptr,
-    &pesapi_get_holder,
+    &pesapi_get_native_holder_typeid,
     &pesapi_get_userdata,
     &pesapi_add_return,
     &pesapi_throw_by_string,

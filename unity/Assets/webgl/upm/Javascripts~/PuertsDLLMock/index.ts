@@ -15,7 +15,7 @@ import WebGLBackendRegisterAPI from "./mixins/register";
 import WebGLBackendSetToInvokeJSArgumentApi from "./mixins/setToInvokeJSArgument";
 import WebGLBackendSetToJSInvokeReturnApi from "./mixins/setToJSInvokeReturn";
 import WebGLBackendSetToJSOutArgumentAPI from "./mixins/setToJSOutArgument";
-import {GetWebGLFFIApi, WebGLRegsterApi} from "./pesapiImpl"
+import {WebGLFFIApi, WebGLRegsterApi} from "./pesapiImpl"
 
 declare const PUERTS_JS_RESOURCES: any;
 declare const wxRequire: any;
@@ -49,6 +49,7 @@ global.PuertsWebGL = {
             WebGLBackendSetToJSOutArgumentAPI(engine),
             WebGLBackendRegisterAPI(engine),
             WebGLRegsterApi(engine),
+            WebGLFFIApi(engine),
             {
                 // bridgeLog: true,
                 GetLibVersion: function () {
@@ -174,10 +175,10 @@ global.PuertsWebGL = {
                     return jsfunc.id;
                 },
                 Eval: function (isolate: IntPtr, codeString: CSString, path: string) {
-                    if (!global.eval) {
-                        throw new Error("eval is not supported");
-                    }
                     try {
+                        if (!global.eval) {
+                            throw new Error("eval is not supported");
+                        }
                         const code = engine.unityApi.UTF8ToString(codeString);
                         const result = global.eval(code);
                         // return getIntPtrManager().GetPointerForJSValue(result);
@@ -246,9 +247,6 @@ global.PuertsWebGL = {
                 },
                 GetJSStackTrace: function (isolate: IntPtr) {
                     return new Error().stack;
-                },
-                GetWebGLFFIApi: function() {
-                    return GetWebGLFFIApi(engine);
                 },
                 GetWebGLPapiEnvRef: function() {
                     return 2048; // just not nullptr

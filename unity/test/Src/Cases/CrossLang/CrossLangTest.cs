@@ -151,6 +151,12 @@ namespace Puerts.UnitTest
         {
             return TestEnum.B;
         }
+
+        [UnityEngine.Scripting.Preserve]
+        public static void TestEnumCheck(string a, TestEnum e = TestEnum.A, int b = 10) // 有默认值会促使其检查参数类型
+        {
+
+        }
     }
     public unsafe class TestHelper
     {
@@ -206,7 +212,7 @@ namespace Puerts.UnitTest
 
         public TestHelper()
         {
-#if UNITY_EDITOR || PUERTS_DISABLE_IL2CPP_OPTIMIZATION || (!PUERTS_IL2CPP_OPTIMIZATION && (UNITY_WEBGL || UNITY_IPHONE))
+#if UNITY_EDITOR || PUERTS_DISABLE_IL2CPP_OPTIMIZATION || (!PUERTS_IL2CPP_OPTIMIZATION && UNITY_IPHONE)
             var env = UnitTestEnv.GetEnv();
             env.UsingFunc<int>();
             env.UsingFunc<int, int>();
@@ -296,6 +302,30 @@ namespace Puerts.UnitTest
             AssertAndPrint("CSGetStringReturnFromJS", JSValueHandler(initialValue + "d"), "abcde");
             outArg = "abcdef";
             return "abcdefg";
+        }
+
+        public string UnicodeStr(string str)
+        {
+            AssertAndPrint("UnicodeStr", str, "你好");
+            return "小马哥";
+        }
+
+        public string PassStr(string str)
+        {
+            return str;
+        }
+        public void PassStr(string str, int a)
+        {
+
+        }
+
+        public TestHelper PassObj(TestHelper test)
+        {
+            return test;
+        }
+
+        public void PassObj(TestHelper test, int a)
+        {
         }
 
         public string stringTestField = null;
@@ -754,6 +784,8 @@ namespace Puerts.UnitTest
                     TestHelper.stringTestFieldStatic = 'Puer'
                     TestHelper.stringTestPropStatic = 'Puer'
                     testHelper.StringTestCheckMemberValue();
+                    const ustr = testHelper.UnicodeStr('你好');
+                    assertAndPrint('UnicodeStr', ustr, '小马哥');
                 })()
             ");
             jsEnv.Tick();
@@ -1060,6 +1092,7 @@ namespace Puerts.UnitTest
             jsEnv.Tick();
         }
 
+#if !UNITY_WEBGL || UNITY_EDITOR
         [Test]
         public void CallDelegateAfterJsEnvDisposed()
         {
@@ -1078,7 +1111,6 @@ namespace Puerts.UnitTest
         }
 
         //看上去GC.Collect()对webgl无效，先去掉
-#if !UNITY_WEBGL || UNITY_EDITOR
         [Test]
         public void TestJsGC()
         {
@@ -1129,12 +1161,8 @@ namespace Puerts.UnitTest
         [Test]
         public void OverloadTest()
         {
-            //
-#if PUERTS_GENERAL
-            var jsEnv = new JsEnv(new TxtLoader());
-#else
-            var jsEnv = new JsEnv(new DefaultLoader());
-#endif
+            var jsEnv = UnitTestEnv.GetEnv();
+
             jsEnv.Eval(@"
             (function() {
             const o = new CS.Puerts.UnitTest.OverloadTestObject();
@@ -1154,8 +1182,63 @@ namespace Puerts.UnitTest
             ");
 
             Assert.AreEqual(2, OverloadTestObject.LastCall);
+        }
 
-            jsEnv.Dispose();
+        [Test]
+        public void FuncAsJsObject()
+        {
+            var jsEnv = UnitTestEnv.GetEnv();
+            var jso = jsEnv.Eval<JSObject>(@"
+            (function() {
+                function t(){}
+                return t;
+            }) ();
+            ");
+            Assert.True(jso != null);
+        }
+
+        [Test]
+        public void EnumParamCheck() // https://github.com/Tencent/puerts/issues/2018
+        {
+            var jsEnv = UnitTestEnv.GetEnv();
+            jsEnv.Eval(@"
+            (function() {
+                CS.Puerts.UnitTest.CrossLangTestHelper.TestEnumCheck('a', 1, 2);
+            }) ();
+            ");
+        }
+
+        [Test]
+        public void PassNullTest()
+        {
+            var jsEnv = UnitTestEnv.GetEnv();
+            jsEnv.Eval(@"
+                (function() {
+                    const TestHelper = CS.Puerts.UnitTest.TestHelper;
+                    const assertAndPrint = TestHelper.AssertAndPrint.bind(TestHelper);
+
+                    const testHelper = TestHelper.GetInstance();
+                    testHelper.PassStr(null);
+                    testHelper.PassStr(undefined);
+                    testHelper.PassObj(null);
+                    testHelper.PassObj(undefined);
+                    
+                })()
+            ");
+            Assert.Catch(() =>
+            {
+                jsEnv.Eval(@"
+                (function() {
+                    const TestHelper = CS.Puerts.UnitTest.TestHelper;
+                    const assertAndPrint = TestHelper.AssertAndPrint.bind(TestHelper);
+
+                    const testHelper = TestHelper.GetInstance();
+                    testHelper.PassObj('aaaaaa');
+                    
+                })()
+            ");
+            }, "invalid arguments to PassObj");
+            jsEnv.Tick();
         }
     }
 }

@@ -5,7 +5,7 @@
 * This file is subject to the terms and conditions defined in file 'LICENSE', which is part of this source code package.
 */
 
-#if PUERTS_DISABLE_IL2CPP_OPTIMIZATION || (!PUERTS_IL2CPP_OPTIMIZATION && (UNITY_WEBGL || UNITY_IPHONE)) || !ENABLE_IL2CPP
+#if PUERTS_DISABLE_IL2CPP_OPTIMIZATION || (!PUERTS_IL2CPP_OPTIMIZATION && UNITY_IPHONE) || !ENABLE_IL2CPP
 
 using System;
 using System.Linq;
@@ -96,13 +96,16 @@ namespace Puerts
 
         public JsEnv(ILoader loader, int debugPort, BackendType backend, IntPtr externalRuntime, IntPtr externalContext)
         {
+#if !UNITY_EDITOR && UNITY_WEBGL
+            if (jsEnvs.Count == 0) PuertsDLL.InitPuertsWebGL();
+#endif
             const int libVersionExpect = 34;
             int libVersion = PuertsDLL.GetApiLevel();
             if (libVersion != libVersionExpect)
             {
                 throw new InvalidProgramException("expect lib version " + libVersionExpect + ", but got " + libVersion);
             }
-            // PuertsDLL.SetLogCallback(LogCallback, LogWarningCallback, LogErrorCallback);
+            PuertsDLL.SetLogCallback(LogCallback, LogWarningCallback, LogErrorCallback);
             this.loader = loader;
             this.loaderCanCheckESM = loader is IModuleChecker;
             
@@ -114,7 +117,15 @@ namespace Puerts
             {
                 isolate = PuertsDLL.CreateJSEngine((int)backend);
             }
-            
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            if (PuertsDLL.GetLibBackend(isolate) != 2 && jsEnvs.Count > 0)
+            {
+                disposed = true;
+                throw new InvalidOperationException("more than one JsEnv instance is not supported in WebGL");
+            }
+#endif
+
             if (isolate == IntPtr.Zero)
             {
                 disposed = true;
@@ -860,32 +871,32 @@ namespace Puerts
         }
 #endif
 
-        //         [MonoPInvokeCallback(typeof(LogCallback))]
-        //         private static void LogCallback(string msg)
-        //         {
-        // #if PUERTS_GENERAL || (UNITY_WSA && !UNITY_EDITOR)
-        // #else
-        //             UnityEngine.Debug.Log(msg);
-        // #endif
-        //         }
+        [MonoPInvokeCallback(typeof(LogCallback))]
+        public static void LogCallback(string msg)
+        {
+#if PUERTS_GENERAL || (UNITY_WSA && !UNITY_EDITOR)
+#else
+            UnityEngine.Debug.Log(msg);
+#endif
+        }
 
-        //         [MonoPInvokeCallback(typeof(LogCallback))]
-        //         private static void LogWarningCallback(string msg)
-        //         {
-        // #if PUERTS_GENERAL || (UNITY_WSA && !UNITY_EDITOR)
-        // #else
-        //             UnityEngine.Debug.Log(msg);
-        // #endif
-        //         }
+        [MonoPInvokeCallback(typeof(LogCallback))]
+        public static void LogWarningCallback(string msg)
+        {
+#if PUERTS_GENERAL || (UNITY_WSA && !UNITY_EDITOR)
+#else
+            UnityEngine.Debug.Log(msg);
+#endif
+        }
 
-        //         [MonoPInvokeCallback(typeof(LogCallback))]
-        //         private static void LogErrorCallback(string msg)
-        //         {
-        // #if PUERTS_GENERAL || (UNITY_WSA && !UNITY_EDITOR)
-        // #else
-        //             UnityEngine.Debug.Log(msg);
-        // #endif
-        //         }
+        [MonoPInvokeCallback(typeof(LogCallback))]
+        public static void LogErrorCallback(string msg)
+        {
+#if PUERTS_GENERAL || (UNITY_WSA && !UNITY_EDITOR)
+#else
+            UnityEngine.Debug.Log(msg);
+#endif
+        }
 
         ~JsEnv()
         {

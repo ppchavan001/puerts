@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <emscripten.h>
-#include "pesapi.h"
 
 struct MockV8Value
 {
@@ -166,11 +165,27 @@ extern "C"
     {
     }
     
-    void DoInjectPapi(struct pesapi_ffi* api);
-    
-    void EMSCRIPTEN_KEEPALIVE InjectPapiGLNativeImpl(struct pesapi_ffi* api)
+    int EMSCRIPTEN_KEEPALIVE WasmAdd(int a, int b)
     {
-        DoInjectPapi(api);
+        return a + b;
+    }
+    
+    typedef int(*AddFunc)(int a, int b);
+    
+    int EMSCRIPTEN_KEEPALIVE IndirectWasmAdd(AddFunc add, int a, int b)
+    {
+        return add(a, b);
+    }
+    
+    AddFunc EMSCRIPTEN_KEEPALIVE GetWasmAddPtr(){
+        return WasmAdd;
+    }
+    
+    struct pesapi_ffi* InitPapiNative();
+    
+    struct pesapi_ffi* EMSCRIPTEN_KEEPALIVE InjectPapiGLNativeImpl()
+    {
+        return InitPapiNative();
     }
 }
 

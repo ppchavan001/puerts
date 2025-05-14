@@ -40,6 +40,8 @@ JSValue CppObjectMapper::CreateFunction(pesapi_callback Callback, void* Data, pe
         };
 
     JSValue func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) -> JSValue {
+        pesapi::qjsimpl::pesapi_scope__ scope(ctx);
+        
         pesapi_callback callback = (pesapi_callback)(JS_VALUE_GET_PTR(func_data[0]));
         pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(func_data[1]), JS_UNDEFINED, JS_UNDEFINED };
 
@@ -171,6 +173,7 @@ JSValue CppObjectMapper::MakeMethod(pesapi_callback Callback, void* Data)
         pesapi_callback callback = (pesapi_callback)(JS_VALUE_GET_PTR(method_data[0]));
         CppObjectMapper* mapper = (CppObjectMapper*)(JS_VALUE_GET_PTR(method_data[1]));
         
+        pesapi::qjsimpl::pesapi_scope__ scope(ctx);
         pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(method_data[2]), JS_UNDEFINED, JS_UNDEFINED };
         callback(&g_pesapi_ffi, reinterpret_cast<pesapi_callback_info>(&callbackInfo));
         if (JS_IsException(callbackInfo.res))
@@ -237,6 +240,7 @@ JSValue CppObjectMapper::FindOrCreateClass(const puerts::JSClassDefinition* Clas
             const puerts::JSClassDefinition* clsDef = (const puerts::JSClassDefinition*)(JS_VALUE_GET_PTR(ctor_data[0]));
             CppObjectMapper* mapper = (CppObjectMapper*)(JS_VALUE_GET_PTR(ctor_data[1]));
             
+            pesapi::qjsimpl::pesapi_scope__ scope(ctx);
             if (clsDef->Initialize)
             {
                 pesapi_callback_info__ callbackInfo  { ctx, this_val, argc, argv, JS_VALUE_GET_PTR(ctor_data[2]), JS_UNDEFINED, JS_UNDEFINED };
@@ -334,6 +338,27 @@ JSValue CppObjectMapper::FindOrCreateClassByID(const void* typeId)
     return FindOrCreateClass(clsDef);
 }
 
+JSValue CppObjectMapper::findClassByName(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data)
+{
+    if (argc != 1 || !JS_IsString(argv[0]))
+    {
+        return JS_ThrowTypeError(ctx, "findClassByName: expect a string");
+    }
+
+    const char* typeName = JS_ToCString(ctx, argv[0]);
+    auto clsDef = puerts::FindCppTypeClassByCName(typeName);
+    JS_FreeCString(ctx, typeName);
+
+    if (clsDef)
+    {
+        return FindOrCreateClass(clsDef);
+    }
+    else
+    {
+        return JS_UNDEFINED;
+    }
+}
+
 void CppObjectMapper::Initialize(JSContext* ctx_)
 {
     ctx = ctx_;
@@ -371,6 +396,17 @@ void CppObjectMapper::Initialize(JSContext* ctx_)
     PtrClassDef.ScriptName = "__Pointer";
 
     privateDataKey = JS_NewAtom(ctx, "__papi_private_data");
+
+    JSValue FuncData = JS_MKPTR(JS_TAG_EXTERNAL, (void*)this);
+    JSValue Func = JS_NewCFunctionData(ctx, [](JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv, int magic, JSValue *func_data) -> JSValue
+    {
+        CppObjectMapper* Self = (CppObjectMapper*)(JS_VALUE_GET_PTR(func_data[0]));
+        return Self->findClassByName(ctx, this_val, argc, argv, magic, func_data);
+    }, 0, 0, 1, &FuncData);
+    
+    JSValue G = JS_GetGlobalObject(ctx);
+    JS_SetPropertyStr(ctx, G, "findClassByName", Func);
+    JS_FreeValue(ctx, G);
 }
 
 void CppObjectMapper::Cleanup()

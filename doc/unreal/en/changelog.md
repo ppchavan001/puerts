@@ -42,7 +42,7 @@
 
 #### Changes
 
-* Removed file execution capability from FJsEnv::Start
+* Removed the ability to directly Eval scripts from FJsEnv::Start
 
 * Return JS null for UStruct pointers when nullptr; modified UObject and pure C++ objects to return null instead of undefined, fix #1834
 
@@ -50,7 +50,7 @@
 
 * Fixed UE.BuiltinBool access failure
 
-* Resolved crashes in template binding with const script_type* parameters (mapped to $Ref<T> except const char*), related to #1793
+* Resolved crashes in template binding with const script_type* parameters (mapped to `$Ref<T>` except const char*), related to #1793
 
 * Fixed template binding issue where returning std::string& triggered move construction (see #1793)
 
