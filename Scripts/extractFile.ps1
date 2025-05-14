@@ -19,7 +19,7 @@ $tarPath = [System.IO.Path]::ChangeExtension($Path, ".tar")
 
 try {
     # Decompress the .tgz (which is a .tar.gz) to a .tar file
-    Write-Host "Decompressing $Path to $tarPath..."
+    Write-Host "Decompressing [$Path] to [$tarPath]..."
     $inputFile = [System.IO.File]::OpenRead($Path)
     $outputFile = [System.IO.File]::Create($tarPath)
     $gzipStream = New-Object System.IO.Compression.GzipStream($inputFile, [System.IO.Compression.CompressionMode]::Decompress)
@@ -29,7 +29,7 @@ try {
     $outputFile.Close()
     
     # Extract the .tar file using the tar command
-    Write-Host "Extracting $tarPath to $DestinationPath..."
+    Write-Host "Extracting [$tarPath] to [$DestinationPath]..."
     tar -xf $tarPath -C $DestinationPath
 
     # Clean up the temporary .tar file

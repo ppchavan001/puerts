@@ -10,6 +10,9 @@ if (Test-Path $logFile) {
     Remove-Item  -Force $logFile
 }
 
+$deleteCacheAutomatically = $true
+
+
 Start-Transcript -Path $logFile
 
 #endregion
@@ -47,6 +50,11 @@ function Delete {
 }
 
 function DeleteCache {
+
+    if ($deleteCacheAutomatically -eq $false) {
+        return
+    }
+
     $maxAttempts = 5
     $attempt = 0
     while ($attempt -lt $maxAttempts) {
@@ -83,8 +91,9 @@ try {
 
     DeleteCache
     
-    $nodejsPath = Join-Path -Path $PSScriptRoot -ChildPath "..\unreal\Puerts\ThirdParty\nodejs_16"
+    $nodejsPath = Join-Path -Path $PSScriptRoot -ChildPath "..\unreal\Puerts\ThirdParty"
     $nodejsPath = Resolve-Path -Path $nodejsPath
+    $nodejsPath = Join-Path -Path $nodejsPath -ChildPath "nodejs_16"
 
     Write-Warning("NodeJS lib path [$nodejsPath]")
     if (Test-Path -Path $nodejsPath -PathType Container) {
@@ -162,7 +171,7 @@ try {
         }
 
         Print("Extracting file to : $tarLoc")
-        $pluginTarget = Join-Path -Path $currentDir -ChildPath "../unreal/Puerts/ThirdParty/"
+        $pluginTarget = Join-Path -Path $currentDir -ChildPath "../unreal/Puerts/ThirdParty"
         New-Item -ItemType Directory -Path $pluginTarget -Force
         $pluginTarget = Resolve-Path($pluginTarget)
     
